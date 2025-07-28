@@ -121,4 +121,4 @@ Uprawnienia wymuszane są przez mixiny (`SuperadminRequiredMixin`, `StoreAdminRe
 1. **Klonowanie repozytorium**
 2. **Instalacja zależności**
    ```sh
-   pip install -r requirements.txt
+   pip install -r req.txt
