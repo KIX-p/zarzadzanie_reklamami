@@ -100,6 +100,9 @@ DATABASES = {
 #     }
 # }
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://zarzadzaniereklamami-production-e866.up.railway.app'
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
