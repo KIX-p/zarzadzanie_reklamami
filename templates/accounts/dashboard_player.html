@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Panel Odtwarzacza{% endblock %}
+
+{% block extra_css %}
+<style>
+    .token-box {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        word-break: break-all;
+    }
+    .qr-container {
+        text-align: center;
+        margin: 20px 0;
+    }
+    .player-actions {
+        margin-top: 20px;
+    }
+    .status-indicator {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .status-online {
+        background-color: #28a745;
+    }
+    .status-offline {
+        background-color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Panel Odtwarzacza</h2>
+    
+    {% if stand %}
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Informacje o odtwarzaczu</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Dane przypisanego stoiska</h6>
+                                <p><strong>Nazwa stoiska:</strong> {{ stand.name }}</p>
+                                <p><strong>Dział:</strong> {{ stand.department.name }}</p>
+                                <p><strong>Sklep:</strong> {{ stand.department.store.name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Ustawienia wyświetlania</h6>
+                                <p><strong>Domyślny czas wyświetlania:</strong> {{ stand.display_time }} sekund</p>
+                                <p><strong>Animacja przejścia:</strong> {{ stand.get_transition_animation_display }}</p>
+                                <p><strong>Liczba materiałów:</strong> {{ stand.materials.count }}</p>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h5 class="mb-3">Token dostępu API</h5>
+                        <p class="text-muted">Ten token jest wymagany do uwierzytelnienia odtwarzacza. Nie udostępniaj go osobom niepowołanym.</p>
+                        
+                        <div class="token-box">{{ token }}</div>
+                        
+                        <div class="d-flex justify-content-between mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" id="copyToken">
+                                <i class="fas fa-copy me-1"></i> Kopiuj token
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" id="resetToken">
+                                <i class="fas fa-sync-alt me-1"></i> Zresetuj token
+                            </button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h5 class="mb-3">Konfiguracja odtwarzacza</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="qr-container">
+                                    <div id="qrcode"></div>
+                                    <p class="mt-2 small text-muted">Zeskanuj kod QR, aby otworzyć odtwarzacz</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'player-view' %}?token={{ token }}&stand={{ stand.id }}" target="_blank" class="btn btn-primary">
+                                        <i class="fas fa-play-circle me-1"></i> Otwórz odtwarzacz
+                                    </a>
+                                    <a href="#" class="btn btn-outline-secondary" id="startFullscreen">
+                                        <i class="fas fa-expand me-1"></i> Tryb pełnoekranowy
+                                    </a>
+                                    <a href="#" class="btn btn-outline-info" id="downloadConfig">
+                                        <i class="fas fa-download me-1"></i> Pobierz konfigurację
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Status odtwarzacza</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="status-indicator status-offline" id="playerStatus"></span>
+                            <span id="statusText">Offline</span>
+                        </div>
+                        
+                        <p><strong>Ostatnia aktywność:</strong> <span id="lastActivity">Nigdy</span></p>
+                        <p><strong>Wersja aplikacji:</strong> <span id="playerVersion">-</span></p>
+                        <p><strong>Rozdzielczość:</strong> <span id="playerResolution">-</span></p>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i> 
+                            Status jest aktualizowany co 60 sekund. Naciśnij przycisk poniżej, aby odświeżyć ręcznie.
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button class="btn btn-outline-primary" id="refreshStatus">
+                                <i class="fas fa-sync me-1"></i> Odśwież status
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Pomoc</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Jak uruchomić odtwarzacz?</h6>
+                        <ol class="small">
+                            <li>Kliknij "Otwórz odtwarzacz" lub zeskanuj kod QR</li>
+                            <li>W nowej karcie zaloguj się tokenem</li>
+                            <li>Włącz tryb pełnoekranowy (F11)</li>
+                        </ol>
+                        <hr>
+                        <p class="small">W przypadku problemów skontaktuj się z administratorem systemu.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Ten odtwarzacz nie ma przypisanego stoiska. Skontaktuj się z administratorem systemu.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    $(function() {
+        // Inicjalizacja kodu QR
+        const playerUrl = "{% url 'player-view' %}?token={{ token }}&stand={{ stand.id }}";
+        
+        new QRCode(document.getElementById("qrcode"), {
+            text: playerUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        
+        // Kopiowanie tokenu
+        $("#copyToken").click(function() {
+            const tokenText = "{{ token }}";
+            navigator.clipboard.writeText(tokenText)
+                .then(() => {
+                    showToast("Token skopiowany do schowka", "success");
+                })
+                .catch(err => {
+                    showToast("Nie udało się skopiować tokenu", "danger");
+                    console.error('Błąd kopiowania: ', err);
+                });
+        });
+        
+        // Reset tokenu (powinien być obsługiwany przez AJAX)
+        $("#resetToken").click(function() {
+            if (confirm("Czy na pewno chcesz zresetować token? Istniejące połączenia zostaną przerwane.")) {
+                // Tu powinno być żądanie AJAX do resetu tokenu
+                showToast("Funkcja w przygotowaniu", "warning");
+            }
+        });
+        
+        // Otwieranie w trybie pełnoekranowym
+        $("#startFullscreen").click(function(e) {
+            e.preventDefault();
+            window.open(playerUrl, "_blank", "menubar=no,toolbar=no,location=no,status=no");
+        });
+        
+        // Pobieranie konfiguracji
+        $("#downloadConfig").click(function(e) {
+            e.preventDefault();
+            const config = {
+                token: "{{ token }}",
+                stand_id: {{ stand.id }},
+                player_url: playerUrl,
+                api_url: window.location.origin + "/advertisements/api/stand/{{ stand.id }}/",
+                version: "1.0.0"
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "player_config.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+        
+        // Symulacja statusu odtwarzacza (w rzeczywistym systemie powinno być pobierane z API)
+        $("#refreshStatus").click(function() {
+            // Symulujemy odpowiedź z API
+            const randomStatus = Math.random() > 0.3;  // 70% szans na online
+            
+            if (randomStatus) {
+                $("#playerStatus").removeClass("status-offline").addClass("status-online");
+                $("#statusText").text("Online");
+                $("#lastActivity").text("Teraz");
+                $("#playerVersion").text("1.0.0");
+                $("#playerResolution").text("1920x1080");
+            } else {
+                $("#playerStatus").removeClass("status-online").addClass("status-offline");
+                $("#statusText").text("Offline");
+                // Pozostałe wartości bez zmian
+            }
+            
+            showToast("Status odtwarzacza zaktualizowany", "success");
+        });
+        
+        // Funkcja do wyświetlania powiadomień
+        function showToast(message, type) {
+            // Utwórz toast
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+            
+            // Dodaj toast do kontenera
+            if (!$("#toast-container").length) {
+                $("body").append(`
+                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+                `);
+            }
+            $("#toast-container").append(toast);
+            
+            // Pokaż toast
+            const bsToast = new bootstrap.Toast(toast[0], {
+                delay: 3000
+            });
+            bsToast.show();
+            
+            // Usuń toast po ukryciu
+            toast.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+    });
+</script>
+{% endblock %}

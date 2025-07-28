@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel Superadministratora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .status-online {
+        background-color: #28a745;
+    }
+    .status-offline {
+        background-color: #dc3545;
+    }
+    .player-card {
+        transition: all 0.2s ease-in-out;
+    }
+    .player-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .store-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Panel Superadministratora</h2>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'store-list' %}" class="btn btn-primary">
+                <i class="fas fa-store me-2"></i>Zarządzanie sklepami
+            </a>
+        </div>
+    </div>
+    
+    <!-- Dashboard overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Sklepy</h5>
+                    <h2>{{ stores|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Aktywne odtwarzacze</h5>
+                    <h2>{{ active_players }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Całkowita liczba stoisk</h5>
+                    <h2>{{ stands_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Użytkownicy</h5>
+                    <h2>{{ users_count }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Monitorowanie odtwarzaczy</h5>
+            <button id="refreshStatusBtn" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-sync me-1"></i> Odśwież
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row" id="playersMonitor">
+                {% for store in stores %}
+                    <div class="col-12 store-section">
+                        <h5 class="mb-3">{{ store.name }}</h5>
+                        
+                        <div class="row">
+                            {% for department in store.departments.all %}
+                                {% for stand in department.stands.all %}
+                                    <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                                        <div class="card player-card h-100" data-stand-id="{{ stand.id }}">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between">
+                                                    <h6 class="card-title">{{ stand.name }}</h6>
+                                                    <div>
+                                                        <span class="status-indicator status-offline" id="status-{{ stand.id }}"></span>
+                                                    </div>
+                                                </div>
+                                                <p class="card-text">
+                                                    <small class="text-muted">Dział: {{ department.name }}</small><br>
+                                                    <small class="last-seen" id="last-seen-{{ stand.id }}">Ostatnia aktywność: nieznana</small><br>
+                                                    <small class="version" id="version-{{ stand.id }}">Wersja: -</small>
+                                                </p>
+                                            </div>
+                                            <div class="card-footer bg-transparent">
+                                                <div class="d-flex justify-content-between">
+                                                    <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="fas fa-images"></i>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-outline-primary check-status-btn" data-stand-id="{{ stand.id }}">
+                                                        <i class="fas fa-info-circle"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Brak sklepów w systemie. Dodaj pierwszy sklep, aby rozpocząć monitorowanie.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- System status -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Status systemu</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Wersja systemu:</strong> 1.0.0</p>
+                    <p><strong>Ostatnia aktualizacja:</strong> {% now "d.m.Y H:i" %}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status API:</strong> <span class="badge bg-success">Online</span></p>
+                    <p><strong>Status bazy danych:</strong> <span class="badge bg-success">Online</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(function() {
+        // Funkcja do sprawdzania statusu odtwarzacza
+        function checkPlayerStatus(standId) {
+            return $.ajax({
+                url: `/advertisements/api/player/status/${standId}/`,
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+        }
+        
+        // Funkcja do aktualizacji interfejsu
+        function updatePlayerStatusUI(standId, data) {
+            const statusElement = $(`#status-${standId}`);
+            const lastSeenElement = $(`#last-seen-${standId}`);
+            const versionElement = $(`#version-${standId}`);
+            
+            if (data.is_online) {
+                statusElement.removeClass('status-offline').addClass('status-online');
+            } else {
+                statusElement.removeClass('status-online').addClass('status-offline');
+            }
+            
+            if (data.last_seen) {
+                const date = new Date(data.last_seen);
+                lastSeenElement.text(`Ostatnia aktywność: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`);
+            } else {
+                lastSeenElement.text('Ostatnia aktywność: nieznana');
+            }
+            
+            if (data.version) {
+                versionElement.text(`Wersja: ${data.version}`);
+            } else {
+                versionElement.text('Wersja: -');
+            }
+        }
+        
+        // Sprawdzenie statusu wszystkich odtwarzaczy
+        function checkAllPlayers() {
+            $('.player-card').each(function() {
+                const standId = $(this).data('stand-id');
+                
+                checkPlayerStatus(standId)
+                    .done(function(data) {
+                        updatePlayerStatusUI(standId, data);
+                    })
+                    .fail(function(jqXHR) {
+                        console.error(`Error checking status for stand ${standId}:`, jqXHR);
+                    });
+            });
+        }
+        
+        // Przycisk sprawdzenia statusu konkretnego odtwarzacza
+        $('.check-status-btn').on('click', function() {
+            const standId = $(this).data('stand-id');
+            const btn = $(this);
+            
+            // Animacja przycisku
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            checkPlayerStatus(standId)
+                .done(function(data) {
+                    updatePlayerStatusUI(standId, data);
+                })
+                .fail(function(jqXHR) {
+                    console.error(`Error checking status for stand ${standId}:`, jqXHR);
+                })
+                .always(function() {
+                    // Przywrócenie przycisku
+                    btn.prop('disabled', false);
+                    btn.html('<i class="fas fa-info-circle"></i>');
+                });
+        });
+        
+        // Przycisk odświeżania wszystkich statusów
+        $('#refreshStatusBtn').on('click', function() {
+            const btn = $(this);
+            
+            // Animacja przycisku
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i> Odświeżam...');
+            
+            // Sprawdź status wszystkich odtwarzaczy
+            checkAllPlayers();
+            
+            // Przywrócenie przycisku po 2 sekundach
+            setTimeout(function() {
+                btn.prop('disabled', false);
+                btn.html('<i class="fas fa-sync me-1"></i> Odśwież');
+            }, 2000);
+        });
+        
+        // Sprawdź status wszystkich odtwarzaczy przy ładowaniu strony
+        checkAllPlayers();
+    });
+</script>
+{% endblock %}

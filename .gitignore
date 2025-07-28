@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.log
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+.env
+*.sqlite3
+*.pot
+*.pyc
+
+# VSCode
+.vscode/
+.history/
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Virtualenv
+venv/
+ENV/
+env/
+.venv/
+
+# Test/coverage
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache/
+.pytest_cache/
+*.cover
+*.coverage.*
+
+# IDEs
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Node/npm (if used for frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Misc
+*.bak
+*.swp
+*.tmp
+*.orig

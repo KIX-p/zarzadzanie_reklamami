@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Usuwanie działu{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">Usuwanie działu</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Uwaga!</strong> Czy na pewno chcesz usunąć dział "{{ department.name }}"? 
+                        Spowoduje to również usunięcie wszystkich stoisk i materiałów reklamowych przypisanych do tego działu.
+                        Ta operacja jest nieodwracalna.
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5>Szczegóły działu:</h5>
+                            <p><strong>Nazwa:</strong> {{ department.name }}</p>
+                            <p><strong>Sklep:</strong> {{ department.store.name }}</p>
+                            <p><strong>Liczba stoisk:</strong> {{ department.stands.count }}</p>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'store-detail' pk=department.store.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash-alt me-1"></i> Usuń dział
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

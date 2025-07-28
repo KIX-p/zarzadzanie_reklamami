@@ -1,0 +1,613 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel Administratora Sklepu{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        transition: all 0.3s ease;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .status-online {
+        background-color: #28a745;
+    }
+    .status-offline {
+        background-color: #dc3545;
+    }
+    .activity-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    .quick-stat {
+        text-align: center;
+        padding: 15px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+    .quick-stat:hover {
+        transform: translateY(-3px);
+    }
+    .quick-stat i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        padding: 3px 6px;
+        font-size: 0.7rem;
+    }
+    .list-group-item-action:hover {
+        transform: translateX(5px);
+        transition: transform 0.2s;
+    }
+    .chart-container {
+        height: 200px;
+        position: relative;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col">
+            <h2 class="mb-4">Panel Administratora Sklepu</h2>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{% url 'department-create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Nowy dział
+                </a>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{% url 'store-detail' pk=store.id %}">
+                        <i class="fas fa-store me-2"></i>Szczegóły sklepu
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" id="refreshStatsBtn">
+                        <i class="fas fa-sync me-2"></i>Odśwież dane
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    {% if store %}
+        <!-- Dashboard stats overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Działy</h5>
+                            <i class="fas fa-sitemap fa-2x"></i>
+                        </div>
+                        <h1 class="display-4 mt-3">{{ departments|length }}</h1>
+                        <p class="card-text">Działy w sklepie</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Stoiska</h5>
+                            <i class="fas fa-desktop fa-2x"></i>
+                        </div>
+                        <h1 class="display-4 mt-3">{{ stands_count }}</h1>
+                        <p class="card-text">Zarejestrowane stoiska</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Materiały</h5>
+                            <i class="fas fa-images fa-2x"></i>
+                        </div>
+                        <h1 class="display-4 mt-3">{{ materials_count }}</h1>
+                        <p class="card-text">Materiały reklamowe</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white stats-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Aktywne</h5>
+                            <i class="fas fa-play-circle fa-2x"></i>
+                        </div>
+                        <h1 class="display-4 mt-3" id="activePlayersCount">--</h1>
+                        <p class="card-text">Aktywne odtwarzacze</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Działów i ich stoiska -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Działy w sklepie</h5>
+                            <a href="{% url 'department-create' %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus me-1"></i>Dodaj dział
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if departments %}
+                            <div class="accordion" id="departmentAccordion">
+                                {% for dept in departments %}
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="heading{{ dept.id }}">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                    data-bs-target="#collapse{{ dept.id }}">
+                                                <div class="d-flex justify-content-between align-items-center w-100">
+                                                    <span>{{ dept.name }}</span>
+                                                    <span class="badge bg-primary rounded-pill ms-2">{{ dept.stands.count }} stoisk</span>
+                                                </div>
+                                            </button>
+                                        </h2>
+                                        <div id="collapse{{ dept.id }}" class="accordion-collapse collapse" 
+                                            aria-labelledby="heading{{ dept.id }}" data-bs-parent="#departmentAccordion">
+                                            <div class="accordion-body">
+                                                <div class="d-flex justify-content-end mb-3">
+                                                    <a href="{% url 'department-update' pk=dept.id %}" class="btn btn-sm btn-outline-secondary me-2">
+                                                        <i class="fas fa-edit me-1"></i>Edytuj
+                                                    </a>
+                                                    <a href="{% url 'department-delete' pk=dept.id %}" class="btn btn-sm btn-outline-danger me-2">
+                                                        <i class="fas fa-trash me-1"></i>Usuń
+                                                    </a>
+                                                    <a href="{% url 'stand-create' department_id=dept.id %}" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-plus me-1"></i>Dodaj stoisko
+                                                    </a>
+                                                </div>
+                                                
+                                                {% if dept.stands.exists %}
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover table-sm">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Nazwa stoiska</th>
+                                                                    <th>Status</th>
+                                                                    <th>Materiały</th>
+                                                                    <th>Czas wyświetlania</th>
+                                                                    <th>Akcje</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {% for stand in dept.stands.all %}
+                                                                    <tr class="align-middle">
+                                                                        <td>{{ stand.name }}</td>
+                                                                        <td>
+                                                                            <span class="status-indicator status-offline" id="status-{{ stand.id }}"></span>
+                                                                            <span id="status-text-{{ stand.id }}">Sprawdzam...</span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="badge bg-primary">{{ stand.materials.count }}</span>
+                                                                        </td>
+                                                                        <td>{{ stand.display_time }} s</td>
+                                                                        <td>
+                                                                            <div class="btn-group btn-group-sm">
+                                                                                <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-primary" 
+                                                                                   data-bs-toggle="tooltip" title="Materiały">
+                                                                                    <i class="fas fa-images"></i>
+                                                                                </a>
+                                                                                <a href="{% url 'stand-update' pk=stand.id %}" class="btn btn-outline-secondary" 
+                                                                                   data-bs-toggle="tooltip" title="Edytuj">
+                                                                                    <i class="fas fa-edit"></i>
+                                                                                </a>
+                                                                                <a href="{% url 'stand-delete' pk=stand.id %}" class="btn btn-outline-danger" 
+                                                                                   data-bs-toggle="tooltip" title="Usuń">
+                                                                                    <i class="fas fa-trash"></i>
+                                                                                </a>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="alert alert-info">
+                                                        <i class="fas fa-info-circle me-2"></i>
+                                                        Brak stoisk w tym dziale. Kliknij "Dodaj stoisko", aby stworzyć pierwsze.
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Brak działów w tym sklepie. Dodaj pierwszy dział, aby rozpocząć konfigurację.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Statystyki materiałów -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statystyki materiałów</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="text-center mb-3">Typy materiałów</h6>
+                                <div class="chart-container">
+                                    <canvas id="materialTypesChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-center mb-3">Status materiałów</h6>
+                                <div class="chart-container">
+                                    <canvas id="materialStatusChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Porada:</strong> Zalecamy balans między materiałami obrazowymi i wideo dla najlepszych efektów.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <!-- Informacje o sklepie -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">{{ store.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Lokalizacja:</strong> {{ store.location }}</p>
+                        <p><strong>Działy:</strong> {{ departments|length }}</p>
+                        <p><strong>Stanowiska:</strong> {{ stands_count }}</p>
+                        <p><strong>Materiały reklamowe:</strong> {{ materials_count }}</p>
+                        <hr>
+                        <div class="d-grid">
+                            <a href="{% url 'store-detail' pk=store.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-store me-2"></i>Zarządzaj sklepem
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ostatnia aktywność -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Ostatnie aktywności</h5>
+                            <span class="badge bg-primary rounded-pill">5 nowych</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <div class="activity-item p-3">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Dodano nowy materiał</h6>
+                                    <small class="text-muted">2 godz. temu</small>
+                                </div>
+                                <p class="mb-1">Edytor Jan Kowalski dodał nowy materiał do stoiska "AGD"</p>
+                                <small class="text-muted">Dział: Elektronika</small>
+                            </div>
+                            <div class="activity-item p-3">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Zmieniono kolejność</h6>
+                                    <small class="text-muted">4 godz. temu</small>
+                                </div>
+                                <p class="mb-1">Zmieniono kolejność wyświetlania materiałów na stoisku "Perfumy"</p>
+                                <small class="text-muted">Dział: Kosmetyki</small>
+                            </div>
+                            <div class="activity-item p-3">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Dodano nowe stoisko</h6>
+                                    <small class="text-muted">wczoraj</small>
+                                </div>
+                                <p class="mb-1">Utworzono nowe stoisko "Wyprzedaż" w dziale "Odzież"</p>
+                                <small class="text-muted">Admin: System</small>
+                            </div>
+                        </div>
+                        <div class="p-3 text-center">
+                            <button class="btn btn-sm btn-outline-primary">Zobacz wszystkie aktywności</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Szybkie akcje -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Szybkie akcje</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <a href="{% url 'department-create' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-plus-circle me-2"></i>Dodaj nowy dział
+                            </a>
+                            <a href="{% url 'store-detail' pk=store.id %}#add-stand" class="list-group-item list-group-item-action">
+                                <i class="fas fa-desktop me-2"></i>Dodaj nowe stoisko
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+                                <i class="fas fa-file-alt me-2"></i>Generuj raport materiałów
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action" id="checkStatusBtn">
+                                <i class="fas fa-sync me-2"></i>Sprawdź status odtwarzaczy
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Powiadomienia -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Powiadomienia</h5>
+                            <span class="badge bg-danger rounded-pill">3</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <a href="#" class="list-group-item list-group-item-action py-3">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Nieaktywny odtwarzacz</h6>
+                                    <small class="text-danger">Wymaga działania</small>
+                                </div>
+                                <p class="mb-1">Stoisko "Promocje" jest offline od 24 godzin.</p>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action py-3">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Brak materiałów</h6>
+                                    <small class="text-warning">Zalecane działanie</small>
+                                </div>
+                                <p class="mb-1">Stoisko "Kasa 3" nie ma żadnych materiałów reklamowych.</p>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action py-3">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Nowy użytkownik</h6>
+                                    <small class="text-info">Informacja</small>
+                                </div>
+                                <p class="mb-1">Zarejestrowano nowego edytora. Przypisz mu stoisko.</p>
+                            </a>
+                        </div>
+                        <div class="p-3 text-center">
+                            <button class="btn btn-sm btn-outline-secondary">Oznacz wszystkie jako przeczytane</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>Nie przypisano sklepu do Twojego konta. Skontaktuj się z administratorem systemu.
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal dla generowania raportu -->
+<div class="modal fade" id="generateReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generuj raport materiałów</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Typ raportu</label>
+                        <select class="form-select">
+                            <option value="all">Wszystkie materiały</option>
+                            <option value="active">Tylko aktywne materiały</option>
+                            <option value="inactive">Tylko nieaktywne materiały</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dział</label>
+                        <select class="form-select">
+                            <option value="all">Wszystkie działy</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Format</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="reportFormat" id="formatPDF" checked>
+                            <label class="form-check-label" for="formatPDF">PDF</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="reportFormat" id="formatCSV">
+                            <label class="form-check-label" for="formatCSV">CSV</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary">Generuj raport</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(function() {
+        // Inicjalizacja tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Funkcja do sprawdzania statusu odtwarzacza
+        function checkPlayerStatus(standId) {
+            return $.ajax({
+                url: `/advertisements/api/player/status/${standId}/`,
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+        }
+        
+        // Funkcja do aktualizacji interfejsu
+        function updatePlayerStatusUI(standId, data) {
+            const statusElement = $(`#status-${standId}`);
+            const textElement = $(`#status-text-${standId}`);
+            
+            if (data.is_online) {
+                statusElement.removeClass('status-offline').addClass('status-online');
+                textElement.text('Online');
+            } else {
+                statusElement.removeClass('status-online').addClass('status-offline');
+                textElement.text('Offline');
+            }
+        }
+        
+        // Sprawdź status wszystkich odtwarzaczy
+        function checkAllPlayers() {
+            let activeCount = 0;
+            let totalCount = 0;
+            
+            // Zbierz wszystkie ID stoisk
+            const standIds = [];
+            $('.status-indicator').each(function() {
+                const id = $(this).attr('id').replace('status-', '');
+                standIds.push(id);
+                totalCount++;
+            });
+            
+            // Sprawdź status każdego stoiska
+            const promises = standIds.map(id => {
+                return checkPlayerStatus(id)
+                    .then(data => {
+                        updatePlayerStatusUI(id, data);
+                        if (data.is_online) activeCount++;
+                    })
+                    .catch(err => {
+                        console.error(`Błąd sprawdzania statusu dla stoiska ${id}:`, err);
+                    });
+            });
+            
+            Promise.all(promises).then(() => {
+                $('#activePlayersCount').text(activeCount);
+            });
+        }
+        
+        // Przycisk sprawdzania statusu
+        $('#checkStatusBtn, #refreshStatsBtn').on('click', function() {
+            checkAllPlayers();
+            // Pokaż powiadomienie o odświeżeniu
+            showToast("Odświeżanie statusu odtwarzaczy...", "info");
+        });
+        
+        // Wykres typów materiałów
+        const materialTypesCtx = document.getElementById('materialTypesChart').getContext('2d');
+        const materialTypesChart = new Chart(materialTypesCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Obrazy', 'Wideo'],
+                datasets: [{
+                    data: [65, 35],
+                    backgroundColor: ['#36a2eb', '#ff6384'],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Wykres statusu materiałów
+        const materialStatusCtx = document.getElementById('materialStatusChart').getContext('2d');
+        const materialStatusChart = new Chart(materialStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aktywne', 'Nieaktywne'],
+                datasets: [{
+                    data: [75, 25],
+                    backgroundColor: ['#4bc0c0', '#ff9f40'],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Funkcja do wyświetlania powiadomień
+        function showToast(message, type) {
+            // Utwórz toast
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+            
+            // Dodaj toast do kontenera
+            if (!$("#toast-container").length) {
+                $("body").append(`
+                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+                `);
+            }
+            $("#toast-container").append(toast);
+            
+            // Pokaż toast
+            const bsToast = new bootstrap.Toast(toast[0], {
+                delay: 3000
+            });
+            bsToast.show();
+            
+            // Usuń toast po ukryciu
+            toast.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+        
+        // Inicjalizacja - sprawdź status odtwarzaczy przy załadowaniu strony
+        checkAllPlayers();
+    });
+</script>
+{% endblock %}

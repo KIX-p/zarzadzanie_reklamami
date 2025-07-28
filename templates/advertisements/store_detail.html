@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ store.name }} - Szczegóły{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'store-list' %}">Sklepy</a></li>
+                    <li class="breadcrumb-item active">{{ store.name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ store.name }}</h4>
+                    <div>
+                        <a href="{% url 'store-update' pk=store.id %}" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fas fa-edit me-1"></i>Edytuj sklep
+                        </a>
+                        {% if user.is_superadmin %}
+                            <a href="{% url 'store-delete' pk=store.id %}" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i>Usuń sklep
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Lokalizacja:</strong> {{ store.location }}</p>
+                            <p><strong>Data utworzenia:</strong> {{ store.created_at|date:"d.m.Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Liczba działów:</strong> {{ store.departments.count }}</p>
+                            <p><strong>Ostatnia aktualizacja:</strong> {{ store.updated_at|date:"d.m.Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Działy</h5>
+                    <a href="{% url 'department-create' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Dodaj dział
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if store.departments.exists %}
+                        <div class="accordion" id="departmentAccordion">
+                            {% for department in store.departments.all %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading{{ department.id }}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#collapse{{ department.id }}">
+                                            {{ department.name }} 
+                                            <span class="badge bg-primary ms-2">{{ department.stands.count }} stoisk</span>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ department.id }}" class="accordion-collapse collapse" 
+                                         aria-labelledby="heading{{ department.id }}" data-bs-parent="#departmentAccordion">
+                                        <div class="accordion-body">
+                                            <div class="d-flex justify-content-end mb-3">
+                                                <a href="{% url 'department-update' pk=department.id %}" class="btn btn-sm btn-outline-secondary me-2">
+                                                    <i class="fas fa-edit"></i> Edytuj
+                                                </a>
+                                                <a href="{% url 'department-delete' pk=department.id %}" class="btn btn-sm btn-outline-danger me-2">
+                                                    <i class="fas fa-trash"></i> Usuń
+                                                </a>
+                                                <a href="{% url 'stand-create' department_id=department.id %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-plus"></i> Dodaj stoisko
+                                                </a>
+                                            </div>
+                                            
+                                            {% if department.stands.exists %}
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-hover">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Nazwa stoiska</th>
+                                                                <th>Czas wyświetlania</th>
+                                                                <th>Animacja</th>
+                                                                <th>Materiały</th>
+                                                                <th>Akcje</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for stand in department.stands.all %}
+                                                                <tr>
+                                                                    <td>{{ stand.name }}</td>
+                                                                    <td>{{ stand.display_time }} s</td>
+                                                                    <td>{{ stand.get_transition_animation_display }}</td>
+                                                                    <td>{{ stand.materials.count }}</td>
+                                                                    <td>
+                                                                        <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-sm btn-primary">
+                                                                            <i class="fas fa-images"></i>
+                                                                        </a>
+                                                                        <a href="{% url 'stand-update' pk=stand.id %}" class="btn btn-sm btn-outline-secondary">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </a>
+                                                                        <a href="{% url 'stand-delete' pk=stand.id %}" class="btn btn-sm btn-outline-danger">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            {% else %}
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle me-2"></i>Brak stoisk w tym dziale.
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Brak działów w tym sklepie. Dodaj pierwszy dział, aby rozpocząć konfigurację.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.id %}Edycja działu{% else %}Nowy dział{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        {% if form.instance.id %}
+                            Edycja działu
+                        {% else %}
+                            Nowy dział
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Nazwa działu</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger">{{ form.name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if not form.instance.id and user.is_superadmin %}
+                            <div class="mb-3">
+                                <label for="{{ form.store.id_for_label }}" class="form-label">Sklep</label>
+                                {{ form.store }}
+                                {% if form.store.errors %}
+                                    <div class="text-danger">{{ form.store.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            {% if form.instance.id %}
+                                <a href="{% url 'store-detail' pk=form.instance.store.id %}" class="btn btn-outline-secondary">Anuluj</a>
+                            {% else %}
+                                <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Anuluj</a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.id %}Zapisz zmiany{% else %}Dodaj dział{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(function() {
+        // Dodanie klas Bootstrap do formularza
+        $('#{{ form.name.id_for_label }}').addClass('form-control');
+        {% if not form.instance.id and user.is_superadmin %}
+            $('#{{ form.store.id_for_label }}').addClass('form-select');
+        {% endif %}
+    });
+</script>
+{% endblock %}

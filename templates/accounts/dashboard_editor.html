@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel Edytora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .material-card {
+        transition: transform 0.2s ease;
+        margin-bottom: 15px;
+    }
+    .material-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+    .material-preview {
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    .material-preview img {
+        max-height: 100%;
+        max-width: 100%;
+    }
+    .material-preview video {
+        max-height: 100%;
+        max-width: 100%;
+    }
+    .status-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    .stats-card {
+        transition: all 0.3s ease;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Panel Edytora</h2>
+        </div>
+        <div class="col-auto">
+            {% if stand %}
+                <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-primary">
+                    <i class="fas fa-images me-2"></i>Zarządzaj materiałami
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if stand %}
+        <div class="row mb-4">
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">{{ stand.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Dział:</strong> {{ stand.department.name }}</p>
+                        <p><strong>Sklep:</strong> {{ stand.department.store.name }}</p>
+                        <p><strong>Czas wyświetlania:</strong> {{ stand.display_time }} sekund</p>
+                        <p><strong>Animacja przejścia:</strong> {{ stand.get_transition_animation_display }}</p>
+                        <hr>
+                        <div class="d-grid">
+                            <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-cog me-2"></i>Szczegóły stoiska
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-8">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card bg-success text-white h-100 stats-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">Aktywne materiały</h5>
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                                <h1 class="display-4 mt-3">{{ active_materials }}</h1>
+                                <p class="card-text">Materiały aktualnie wyświetlane</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="card bg-secondary text-white h-100 stats-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">Nieaktywne materiały</h5>
+                                    <i class="fas fa-pause-circle fa-2x"></i>
+                                </div>
+                                <h1 class="display-4 mt-3">{{ inactive_materials }}</h1>
+                                <p class="card-text">Materiały oczekujące na aktywację</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bullhorn me-2"></i>Materiały do emisji
+                        </h5>
+                        <a href="{% url 'material-create' stand_id=stand.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i>Dodaj materiał
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if materials %}
+                            <div class="row">
+                                {% for material in materials|slice:":3" %}
+                                    <div class="col-md-4">
+                                        <div class="card material-card position-relative">
+                                            <div class="material-preview">
+                                                {% if material.material_type == 'image' %}
+                                                    <img src="{{ material.file.url }}" alt="Materiał #{{ material.id }}">
+                                                {% else %}
+                                                    <video src="{{ material.file.url }}" controls></video>
+                                                {% endif %}
+                                            </div>
+                                            <div class="card-body">
+                                                <h6>{{ material.get_material_type_display }}</h6>
+                                                <p class="mb-1">Czas wyświetlania: {{ material.duration }} s</p>
+                                                <p class="mb-0">
+                                                    <small class="text-muted">Kolejność: {{ forloop.counter }}</small>
+                                                </p>
+                                            </div>
+                                            {% if material.status == 'active' %}
+                                                <span class="badge bg-success status-badge">Aktywny</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary status-badge">Nieaktywny</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% if materials.count > 3 %}
+                                <div class="text-center mt-3">
+                                    <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Zobacz wszystkie materiały ({{ materials.count }})
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Brak materiałów reklamowych dla tego stoiska. 
+                                <a href="{% url 'material-create' stand_id=stand.id %}" class="alert-link">Dodaj pierwszy materiał</a>, 
+                                aby rozpocząć konfigurację wyświetlania.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Szybkie akcje</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <a href="{% url 'material-create' stand_id=stand.id %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-plus-circle me-2"></i>Dodaj nowy materiał reklamowy
+                            </a>
+                            <a href="{% url 'player-view' %}?stand={{ stand.id }}" class="list-group-item list-group-item-action" target="_blank">
+                                <i class="fas fa-play-circle me-2"></i>Podgląd odtwarzacza
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action" onclick="downloadMaterialsReport(); return false;">
+                                <i class="fas fa-file-download me-2"></i>Raport materiałów reklamowych
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Kalendarz emisji</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Funkcja kalendarza emisji materiałów jest w przygotowaniu. Będzie dostępna wkrótce.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Nie przypisano Ci żadnego stoiska.</strong> Skontaktuj się z administratorem systemu, 
+            aby przypisać stoisko do Twojego konta edytora.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function downloadMaterialsReport() {
+        // Przykładowa funkcja - w rzeczywistej aplikacji powinna wykonać żądanie AJAX
+        // i pobrać wygenerowany raport
+        alert('Funkcja generowania raportów będzie dostępna wkrótce.');
+    }
+    
+    $(function() {
+        // Przykładowy kod inicjalizacyjny, który można rozbudować
+        console.log("Panel edytora załadowany");
+    });
+</script>
+{% endblock %}

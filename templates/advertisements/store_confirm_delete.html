@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Usuwanie sklepu{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">Usuwanie sklepu</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Uwaga!</strong> Czy na pewno chcesz usunąć sklep "{{ store.name }}"? 
+                        Spowoduje to również usunięcie wszystkich działów, stoisk i materiałów reklamowych przypisanych do tego sklepu.
+                        Ta operacja jest nieodwracalna.
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5>Szczegóły sklepu:</h5>
+                            <p><strong>Nazwa:</strong> {{ store.name }}</p>
+                            <p><strong>Lokalizacja:</strong> {{ store.location }}</p>
+                            <p><strong>Liczba działów:</strong> {{ store.departments.count }}</p>
+                            {% if department_count > 0 %}
+                                <div class="alert alert-danger mt-3">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    Uwaga: W tym sklepie jest {% if department_count == 1 %}1 dział{% else %}{{ department_count }} działy{% endif %}.
+                                    Wszystkie dane zostaną bezpowrotnie usunięte.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'store-list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash-alt me-1"></i> Usuń sklep
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

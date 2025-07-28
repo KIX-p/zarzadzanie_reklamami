@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.id %}Edycja materiału{% else %}Nowy materiał{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3>
+                        {% if form.instance.id %}
+                            Edycja materiału
+                        {% else %}
+                            Nowy materiał reklamowy
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.stand.id_for_label }}" class="form-label">Stoisko</label>
+                            {{ form.stand }}
+                            {% if form.stand.errors %}
+                                <div class="text-danger">{{ form.stand.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.material_type.id_for_label }}" class="form-label">Typ materiału</label>
+                            {{ form.material_type }}
+                            {% if form.material_type.errors %}
+                                <div class="text-danger">{{ form.material_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.file.id_for_label }}" class="form-label">Plik</label>
+                            {{ form.file }}
+                            <div class="form-text" id="file-help">
+                                Dozwolone formaty: jpg, jpeg, png, gif, mp4, avi, mov
+                            </div>
+                            {% if form.file.errors %}
+                                <div class="text-danger">{{ form.file.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if form.instance.file %}
+                            <div class="mb-3">
+                                <label class="form-label">Podgląd:</label>
+                                <div class="border p-2" style="max-height:300px; overflow:hidden; text-align:center;">
+                                    {% if form.instance.material_type == 'image' %}
+                                        <img src="{{ form.instance.file.url }}" alt="Podgląd" style="max-height:280px; max-width:100%;">
+                                    {% else %}
+                                        <video src="{{ form.instance.file.url }}" controls style="max-height:280px; max-width:100%;"></video>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.duration.id_for_label }}" class="form-label">Czas wyświetlania (sekundy)</label>
+                            {{ form.duration }}
+                            {% if form.duration.errors %}
+                                <div class="text-danger">{{ form.duration.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% if form.instance.id %}{% url 'stand-materials' pk=form.instance.stand.id %}{% else %}{% url 'stand-materials' pk=form.initial.stand.id %}{% endif %}" class="btn btn-outline-secondary">
+                                Anuluj
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.id %}Zapisz zmiany{% else %}Dodaj materiał{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Dynamicznie aktualizuj podpowiedzi dotyczące formatu pliku
+    $(function() {
+        const materialTypeSelect = $('#{{ form.material_type.id_for_label }}');
+        const fileHelp = $('#file-help');
+        
+        function updateFileHelp() {
+            if (materialTypeSelect.val() === 'image') {
+                fileHelp.text('Dozwolone formaty obrazów: jpg, jpeg, png, gif');
+            } else {
+                fileHelp.text('Dozwolone formaty wideo: mp4, avi, mov');
+            }
+        }
+        
+        // Aktualizuj przy zmianie
+        materialTypeSelect.on('change', updateFileHelp);
+        
+        // Aktualizuj na start
+        updateFileHelp();
+    });
+</script>
+{% endblock %}
