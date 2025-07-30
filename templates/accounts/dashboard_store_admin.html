@@ -4,76 +4,302 @@
 
 {% block extra_css %}
 <style>
+    /* General body and container adjustments for a cleaner look */
+    body {
+        background-color: #f8f9fa; /* Light grey background */
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .container {
+        padding-top: 30px;
+        padding-bottom: 30px;
+    }
+
+    /* Card styling for a minimalist feel */
+    .card {
+        border: none; /* Remove default border */
+        border-radius: 0.75rem; /* Slightly larger border-radius for softness */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Softer, subtle shadow */
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        transform: translateY(-3px); /* Gentle lift on hover */
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08); /* Slightly more prominent shadow on hover */
+    }
+
+    .card-header {
+        background-color: #ffffff; /* White background for headers */
+        border-bottom: 1px solid #e9ecef; /* Light border */
+        padding: 1rem 1.5rem;
+        font-weight: 600; /* Slightly bolder header text */
+        color: #343a40; /* Darker text for headers */
+    }
+
+    .card-header.bg-primary {
+        background-color: #007bff !important; /* Retain primary for specific headers */
+        color: #ffffff !important;
+        border-bottom: none;
+    }
+
+    /* Stats Cards - refined colors and layout */
     .stats-card {
-        transition: all 0.3s ease;
+        color: #ffffff;
+        border: none;
+        border-radius: 0.75rem;
+        overflow: hidden; /* Ensures content stays within rounded corners */
+        position: relative;
     }
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    .stats-card .card-body {
+        padding: 1.5rem;
     }
+    .stats-card .card-title {
+        font-size: 1rem;
+        opacity: 0.8;
+        margin-bottom: 0.5rem;
+    }
+    .stats-card .display-4 {
+        font-size: 2.8rem; /* Slightly smaller for better balance */
+        font-weight: 700;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .stats-card .card-text {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    /* Specific stat card colors */
+    .stats-card.bg-primary { background-color: #6c757d !important; /* Muted primary */ }
+    .stats-card.bg-success { background-color: #28a745 !important; }
+    .stats-card.bg-info { background-color: #17a2b8 !important; }
+    .stats-card.bg-warning { background-color: #ffc107 !important; }
+
+    /* Status Indicator */
     .status-indicator {
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         display: inline-block;
-        margin-right: 5px;
+        margin-right: 6px;
+        vertical-align: middle;
     }
     .status-online {
-        background-color: #28a745;
+        background-color: #28a745; /* Green */
     }
     .status-offline {
-        background-color: #dc3545;
+        background-color: #dc3545; /* Red */
     }
-    .activity-item {
-        padding: 10px 0;
-        border-bottom: 1px solid #f0f0f0;
+
+    /* Activity and Notification List */
+    .activity-item, .list-group-item-action {
+        border-color: #f0f2f5; /* Lighter border for list items */
     }
     .activity-item:last-child {
         border-bottom: none;
     }
-    .quick-stat {
-        text-align: center;
-        padding: 15px;
-        border-radius: 8px;
-        transition: all 0.2s;
-    }
-    .quick-stat:hover {
-        transform: translateY(-3px);
-    }
-    .quick-stat i {
-        font-size: 2rem;
-        margin-bottom: 10px;
-    }
-    .notification-badge {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        padding: 3px 6px;
-        font-size: 0.7rem;
-    }
     .list-group-item-action:hover {
-        transform: translateX(5px);
-        transition: transform 0.2s;
+        background-color: #f8f9fa; /* Subtle background change on hover */
+        transform: translateX(3px); /* Less aggressive hover effect */
+        transition: transform 0.2s ease;
     }
+    .list-group-item {
+        padding: 0.75rem 1.5rem;
+    }
+    .activity-item h6 {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .activity-item p {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    .activity-item small {
+        font-size: 0.75rem;
+        color: #adb5bd !important;
+    }
+
+    /* Quick Actions and Notifications Badges */
+    .notification-badge {
+        position: static; /* Position within the flow */
+        margin-left: auto; /* Push to the right */
+        font-size: 0.75rem;
+        padding: 0.3em 0.6em;
+    }
+    .card-header .badge {
+        font-size: 0.75em;
+        padding: 0.4em 0.8em;
+    }
+
+    /* Accordion Customization */
+    .accordion-item {
+        border: 1px solid #e9ecef;
+        margin-bottom: 10px; /* Space between accordion items */
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    .accordion-button {
+        background-color: #ffffff;
+        color: #343a40;
+        font-weight: 600;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.2s ease;
+    }
+    .accordion-button:not(.collapsed) {
+        background-color: #e9ecef;
+        color: #007bff;
+        box-shadow: none;
+    }
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: transparent;
+    }
+    .accordion-body {
+        padding: 1.5rem;
+        background-color: #fcfdfe; /* Slightly different background for body */
+        border-top: 1px solid #e9ecef;
+    }
+    .accordion-button::after {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23343a40'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+        transform: scale(0.8);
+    }
+    .accordion-button:not(.collapsed)::after {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23007bff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+    }
+
+    /* Table Styling */
+    .table-responsive {
+        margin-top: 1rem;
+    }
+    .table {
+        --bs-table-hover-bg: #f5f5f5; /* Lighter hover background */
+        border-collapse: separate; /* Allows for border-radius on cells (if desired) */
+        border-spacing: 0;
+    }
+    .table th, .table td {
+        padding: 0.85rem 1rem;
+        vertical-align: middle;
+    }
+    .table thead th {
+        border-bottom: 2px solid #dee2e6; /* Clearer header separation */
+        font-weight: 600;
+        color: #495057;
+    }
+    .table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+    }
+    .table tbody tr:last-child {
+        border-bottom: none;
+    }
+    .table-sm th, .table-sm td {
+        padding: 0.6rem 0.8rem;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 0.4rem;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+    }
+    .btn-sm {
+        padding: 0.3rem 0.7rem;
+        font-size: 0.875rem;
+    }
+    .btn-outline-secondary {
+        color: #6c757d;
+        border-color: #6c757d;
+    }
+    .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: #fff;
+    }
+    .btn-outline-primary {
+        color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-outline-primary:hover {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    /* Alerts */
+    .alert {
+        border-radius: 0.5rem;
+        font-size: 0.95rem;
+        padding: 1rem 1.5rem;
+    }
+
+    /* Chart Containers */
     .chart-container {
-        height: 200px;
+        height: 250px; /* Increased height for better chart visibility */
         position: relative;
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Modal Styling */
+    .modal-content {
+        border-radius: 0.75rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+        padding: 1.25rem 1.5rem;
+    }
+    .modal-title {
+        font-weight: 600;
+        color: #343a40;
+    }
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+        padding: 1rem 1.5rem;
+    }
+
+    /* Toast Container */
+    #toast-container {
+        z-index: 1080; /* Ensure toast is above other elements */
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 767.98px) {
+        .stats-card .display-4 {
+            font-size: 2.2rem;
+        }
+        .stats-card .card-text {
+            font-size: 0.85rem;
+        }
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        .card-header {
+            padding: 1rem;
+        }
+        .accordion-button {
+            padding: 0.85rem 1.25rem;
+        }
+        .accordion-body {
+            padding: 1.25rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="row mb-3">
-        <div class="col">
-            <h2 class="mb-4">Panel Administratora Sklepu</h2>
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-0">Panel Administratora Sklepu</h2>
+            {% if store %}
+                <p class="text-muted mt-1 mb-0">Zarządzaj sklepem <strong class="text-primary">{{ store.name }}</strong> i jego zasobami.</p>
+            {% endif %}
         </div>
-        <div class="col-auto">
-            <div class="btn-group">
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="btn-group w-100 w-md-auto">
                 <a href="{% url 'department-create' %}" class="btn btn-primary">
                     <i class="fas fa-plus me-1"></i>Nowy dział
                 </a>
-                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
                     <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -88,65 +314,71 @@
             </div>
         </div>
     </div>
-    
+
     {% if store %}
-        <!-- Dashboard stats overview -->
         <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white stats-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Działy</h5>
-                            <i class="fas fa-sitemap fa-2x"></i>
+            <div class="col-sm-6 col-md-3 mb-3 mb-md-0">
+                <div class="card stats-card bg-primary h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title">Działy</h5>
+                                <i class="fas fa-sitemap fa-2x opacity-75"></i>
+                            </div>
+                            <h1 class="display-4">{{ departments|length }}</h1>
                         </div>
-                        <h1 class="display-4 mt-3">{{ departments|length }}</h1>
                         <p class="card-text">Działy w sklepie</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white stats-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Stoiska</h5>
-                            <i class="fas fa-desktop fa-2x"></i>
+            <div class="col-sm-6 col-md-3 mb-3 mb-md-0">
+                <div class="card stats-card bg-success h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title">Stoiska</h5>
+                                <i class="fas fa-desktop fa-2x opacity-75"></i>
+                            </div>
+                            <h1 class="display-4">{{ stands_count }}</h1>
                         </div>
-                        <h1 class="display-4 mt-3">{{ stands_count }}</h1>
                         <p class="card-text">Zarejestrowane stoiska</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white stats-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Materiały</h5>
-                            <i class="fas fa-images fa-2x"></i>
+            <div class="col-sm-6 col-md-3 mb-3 mb-md-0">
+                <div class="card stats-card bg-info h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title">Materiały</h5>
+                                <i class="fas fa-images fa-2x opacity-75"></i>
+                            </div>
+                            <h1 class="display-4">{{ materials_count }}</h1>
                         </div>
-                        <h1 class="display-4 mt-3">{{ materials_count }}</h1>
                         <p class="card-text">Materiały reklamowe</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-white stats-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">Aktywne</h5>
-                            <i class="fas fa-play-circle fa-2x"></i>
+            <div class="col-sm-6 col-md-3 mb-3 mb-md-0">
+                <div class="card stats-card bg-warning h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title">Aktywne</h5>
+                                <i class="fas fa-play-circle fa-2x opacity-75"></i>
+                            </div>
+                            <h1 class="display-4" id="activePlayersCount">--</h1>
                         </div>
-                        <h1 class="display-4 mt-3" id="activePlayersCount">--</h1>
                         <p class="card-text">Aktywne odtwarzacze</p>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="row">
             <div class="col-lg-8">
-                <!-- Działów i ich stoiska -->
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Działy w sklepie</h5>
                             <a href="{% url 'department-create' %}" class="btn btn-sm btn-primary">
@@ -160,29 +392,29 @@
                                 {% for dept in departments %}
                                     <div class="accordion-item">
                                         <h2 class="accordion-header" id="heading{{ dept.id }}">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                                                    data-bs-target="#collapse{{ dept.id }}">
-                                                <div class="d-flex justify-content-between align-items-center w-100">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#collapse{{ dept.id }}" aria-expanded="false" aria-controls="collapse{{ dept.id }}">
+                                                <div class="d-flex justify-content-between align-items-center w-100 pe-3">
                                                     <span>{{ dept.name }}</span>
-                                                    <span class="badge bg-primary rounded-pill ms-2">{{ dept.stands.count }} stoisk</span>
+                                                    <span class="badge bg-secondary rounded-pill ms-2">{{ dept.stands.count }} stoisk</span>
                                                 </div>
                                             </button>
                                         </h2>
-                                        <div id="collapse{{ dept.id }}" class="accordion-collapse collapse" 
+                                        <div id="collapse{{ dept.id }}" class="accordion-collapse collapse"
                                             aria-labelledby="heading{{ dept.id }}" data-bs-parent="#departmentAccordion">
                                             <div class="accordion-body">
-                                                <div class="d-flex justify-content-end mb-3">
-                                                    <a href="{% url 'department-update' pk=dept.id %}" class="btn btn-sm btn-outline-secondary me-2">
-                                                        <i class="fas fa-edit me-1"></i>Edytuj
+                                                <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+                                                    <a href="{% url 'department-update' pk=dept.id %}" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="fas fa-edit me-1"></i>Edytuj dział
                                                     </a>
-                                                    <a href="{% url 'department-delete' pk=dept.id %}" class="btn btn-sm btn-outline-danger me-2">
-                                                        <i class="fas fa-trash me-1"></i>Usuń
+                                                    <a href="{% url 'department-delete' pk=dept.id %}" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash me-1"></i>Usuń dział
                                                     </a>
                                                     <a href="{% url 'stand-create' department_id=dept.id %}" class="btn btn-sm btn-primary">
                                                         <i class="fas fa-plus me-1"></i>Dodaj stoisko
                                                     </a>
                                                 </div>
-                                                
+
                                                 {% if dept.stands.exists %}
                                                     <div class="table-responsive">
                                                         <table class="table table-hover table-sm">
@@ -190,9 +422,9 @@
                                                                 <tr>
                                                                     <th>Nazwa stoiska</th>
                                                                     <th>Status</th>
-                                                                    <th>Materiały</th>
-                                                                    <th>Czas wyświetlania</th>
-                                                                    <th>Akcje</th>
+                                                                    <th class="text-center">Materiały</th>
+                                                                    <th class="text-center">Czas wyświetlania</th>
+                                                                    <th class="text-center">Akcje</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
@@ -203,22 +435,22 @@
                                                                             <span class="status-indicator status-offline" id="status-{{ stand.id }}"></span>
                                                                             <span id="status-text-{{ stand.id }}">Sprawdzam...</span>
                                                                         </td>
-                                                                        <td>
+                                                                        <td class="text-center">
                                                                             <span class="badge bg-primary">{{ stand.materials.count }}</span>
                                                                         </td>
-                                                                        <td>{{ stand.display_time }} s</td>
-                                                                        <td>
-                                                                            <div class="btn-group btn-group-sm">
-                                                                                <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-primary" 
-                                                                                   data-bs-toggle="tooltip" title="Materiały">
+                                                                        <td class="text-center">{{ stand.display_time }} s</td>
+                                                                        <td class="text-center">
+                                                                            <div class="btn-group btn-group-sm" role="group" aria-label="Akcje stoiska">
+                                                                                <a href="{% url 'stand-materials' pk=stand.id %}" class="btn btn-outline-primary"
+                                                                                   data-bs-toggle="tooltip" data-bs-placement="top" title="Materiały">
                                                                                     <i class="fas fa-images"></i>
                                                                                 </a>
-                                                                                <a href="{% url 'stand-update' pk=stand.id %}" class="btn btn-outline-secondary" 
-                                                                                   data-bs-toggle="tooltip" title="Edytuj">
+                                                                                <a href="{% url 'stand-update' pk=stand.id %}" class="btn btn-outline-secondary"
+                                                                                   data-bs-toggle="tooltip" data-bs-placement="top" title="Edytuj">
                                                                                     <i class="fas fa-edit"></i>
                                                                                 </a>
-                                                                                <a href="{% url 'stand-delete' pk=stand.id %}" class="btn btn-outline-danger" 
-                                                                                   data-bs-toggle="tooltip" title="Usuń">
+                                                                                <a href="{% url 'stand-delete' pk=stand.id %}" class="btn btn-outline-danger"
+                                                                                   data-bs-toggle="tooltip" data-bs-placement="top" title="Usuń">
                                                                                     <i class="fas fa-trash"></i>
                                                                                 </a>
                                                                             </div>
@@ -229,7 +461,7 @@
                                                         </table>
                                                     </div>
                                                 {% else %}
-                                                    <div class="alert alert-info">
+                                                    <div class="alert alert-info mt-3 mb-0">
                                                         <i class="fas fa-info-circle me-2"></i>
                                                         Brak stoisk w tym dziale. Kliknij "Dodaj stoisko", aby stworzyć pierwsze.
                                                     </div>
@@ -246,47 +478,45 @@
                         {% endif %}
                     </div>
                 </div>
-                
-                <!-- Statystyki materiałów -->
+
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statystyki materiałów</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row mb-4">
+                        <div class="row mb-3">
                             <div class="col-md-6">
-                                <h6 class="text-center mb-3">Typy materiałów</h6>
+                                <h6 class="text-center mb-3 text-muted">Typy materiałów</h6>
                                 <div class="chart-container">
                                     <canvas id="materialTypesChart"></canvas>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <h6 class="text-center mb-3">Status materiałów</h6>
+                                <h6 class="text-center mb-3 text-muted">Status materiałów</h6>
                                 <div class="chart-container">
                                     <canvas id="materialStatusChart"></canvas>
                                 </div>
                             </div>
                         </div>
-                        <div class="alert alert-info mb-0">
+                        <div class="alert alert-info mb-0 small">
                             <i class="fas fa-lightbulb me-2"></i>
-                            <strong>Porada:</strong> Zalecamy balans między materiałami obrazowymi i wideo dla najlepszych efektów.
+                            <strong>Porada:</strong> Zalecamy balans między materiałami obrazowymi i wideo dla najlepszych efektów wyświetlania.
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-lg-4">
-                <!-- Informacje o sklepie -->
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">{{ store.name }}</h5>
                     </div>
                     <div class="card-body">
-                        <p><strong>Lokalizacja:</strong> {{ store.location }}</p>
-                        <p><strong>Działy:</strong> {{ departments|length }}</p>
-                        <p><strong>Stanowiska:</strong> {{ stands_count }}</p>
-                        <p><strong>Materiały reklamowe:</strong> {{ materials_count }}</p>
-                        <hr>
+                        <p class="mb-2"><strong>Lokalizacja:</strong> {{ store.location }}</p>
+                        <p class="mb-2"><strong>Działy:</strong> {{ departments|length }}</p>
+                        <p class="mb-2"><strong>Stanowiska:</strong> {{ stands_count }}</p>
+                        <p class="mb-0"><strong>Materiały reklamowe:</strong> {{ materials_count }}</p>
+                        <hr class="my-3">
                         <div class="d-grid">
                             <a href="{% url 'store-detail' pk=store.id %}" class="btn btn-outline-primary">
                                 <i class="fas fa-store me-2"></i>Zarządzaj sklepem
@@ -294,18 +524,17 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Ostatnia aktywność -->
+
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-history me-2"></i>Ostatnie aktywności</h5>
-                            <span class="badge bg-primary rounded-pill">5 nowych</span>
+                            <span class="badge bg-primary notification-badge">5 nowych</span>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush">
-                            <div class="activity-item p-3">
+                            <div class="activity-item list-group-item">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">Dodano nowy materiał</h6>
                                     <small class="text-muted">2 godz. temu</small>
@@ -313,7 +542,7 @@
                                 <p class="mb-1">Edytor Jan Kowalski dodał nowy materiał do stoiska "AGD"</p>
                                 <small class="text-muted">Dział: Elektronika</small>
                             </div>
-                            <div class="activity-item p-3">
+                            <div class="activity-item list-group-item">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">Zmieniono kolejność</h6>
                                     <small class="text-muted">4 godz. temu</small>
@@ -321,7 +550,7 @@
                                 <p class="mb-1">Zmieniono kolejność wyświetlania materiałów na stoisku "Perfumy"</p>
                                 <small class="text-muted">Dział: Kosmetyki</small>
                             </div>
-                            <div class="activity-item p-3">
+                            <div class="activity-item list-group-item">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">Dodano nowe stoisko</h6>
                                     <small class="text-muted">wczoraj</small>
@@ -330,68 +559,66 @@
                                 <small class="text-muted">Admin: System</small>
                             </div>
                         </div>
-                        <div class="p-3 text-center">
-                            <button class="btn btn-sm btn-outline-primary">Zobacz wszystkie aktywności</button>
+                        <div class="p-3 text-center border-top">
+                            <button class="btn btn-sm btn-outline-secondary">Zobacz wszystkie aktywności</button>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Szybkie akcje -->
+
                 <div class="card mb-4">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Szybkie akcje</h5>
                     </div>
-                    <div class="card-body">
-                        <div class="list-group">
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
                             <a href="{% url 'department-create' %}" class="list-group-item list-group-item-action">
-                                <i class="fas fa-plus-circle me-2"></i>Dodaj nowy dział
+                                <i class="fas fa-plus-circle me-2 fa-fw"></i>Dodaj nowy dział
                             </a>
                             <a href="{% url 'store-detail' pk=store.id %}#add-stand" class="list-group-item list-group-item-action">
-                                <i class="fas fa-desktop me-2"></i>Dodaj nowe stoisko
+                                <i class="fas fa-desktop me-2 fa-fw"></i>Dodaj nowe stoisko
                             </a>
                             <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#generateReportModal">
-                                <i class="fas fa-file-alt me-2"></i>Generuj raport materiałów
+                                <i class="fas fa-file-alt me-2 fa-fw"></i>Generuj raport materiałów
                             </a>
                             <a href="#" class="list-group-item list-group-item-action" id="checkStatusBtn">
-                                <i class="fas fa-sync me-2"></i>Sprawdź status odtwarzaczy
+                                <i class="fas fa-sync me-2 fa-fw"></i>Sprawdź status odtwarzaczy
                             </a>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Powiadomienia -->
+
                 <div class="card">
-                    <div class="card-header bg-light">
+                    <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Powiadomienia</h5>
-                            <span class="badge bg-danger rounded-pill">3</span>
+                            <span class="badge bg-danger notification-badge">3</span>
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush">
                             <a href="#" class="list-group-item list-group-item-action py-3">
-                                <div class="d-flex w-100 justify-content-between">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
                                     <h6 class="mb-1">Nieaktywny odtwarzacz</h6>
-                                    <small class="text-danger">Wymaga działania</small>
+                                    <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Wymaga działania</small>
                                 </div>
-                                <p class="mb-1">Stoisko "Promocje" jest offline od 24 godzin.</p>
+                                <p class="mb-1 small">Stoisko "Promocje" jest offline od 24 godzin.</p>
                             </a>
                             <a href="#" class="list-group-item list-group-item-action py-3">
-                                <div class="d-flex w-100 justify-content-between">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
                                     <h6 class="mb-1">Brak materiałów</h6>
-                                    <small class="text-warning">Zalecane działanie</small>
+                                    <small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Zalecane działanie</small>
                                 </div>
-                                <p class="mb-1">Stoisko "Kasa 3" nie ma żadnych materiałów reklamowych.</p>
+                                <p class="mb-1 small">Stoisko "Kasa 3" nie ma żadnych materiałów reklamowych.</p>
                             </a>
                             <a href="#" class="list-group-item list-group-item-action py-3">
-                                <div class="d-flex w-100 justify-content-between">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
                                     <h6 class="mb-1">Nowy użytkownik</h6>
-                                    <small class="text-info">Informacja</small>
+                                    <small class="text-info"><i class="fas fa-info-circle me-1"></i>Informacja</small>
                                 </div>
-                                <p class="mb-1">Zarejestrowano nowego edytora. Przypisz mu stoisko.</p>
+                                <p class="mb-1 small">Zarejestrowano nowego edytora. Przypisz mu stoisko.</p>
                             </a>
                         </div>
-                        <div class="p-3 text-center">
+                        <div class="p-3 text-center border-top">
                             <button class="btn btn-sm btn-outline-secondary">Oznacz wszystkie jako przeczytane</button>
                         </div>
                     </div>
@@ -399,33 +626,35 @@
             </div>
         </div>
     {% else %}
-        <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle me-2"></i>Nie przypisano sklepu do Twojego konta. Skontaktuj się z administratorem systemu.
+        <div class="alert alert-warning shadow-sm" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Brak przypisanego sklepu!</h4>
+            <p>Twoje konto nie jest obecnie przypisane do żadnego sklepu. Aby korzystać z panelu, skontaktuj się z administratorem systemu.</p>
+            <hr>
+            <p class="mb-0">Po przypisaniu sklepu, będziesz mógł zarządzać działami, stoiskami i materiałami reklamowymi.</p>
         </div>
     {% endif %}
 </div>
 
-<!-- Modal dla generowania raportu -->
-<div class="modal fade" id="generateReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="generateReportModal" tabindex="-1" aria-labelledby="generateReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Generuj raport materiałów</h5>
+                <h5 class="modal-title" id="generateReportModalLabel">Generuj raport materiałów</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form>
                     <div class="mb-3">
-                        <label class="form-label">Typ raportu</label>
-                        <select class="form-select">
+                        <label for="reportType" class="form-label">Typ raportu</label>
+                        <select class="form-select" id="reportType">
                             <option value="all">Wszystkie materiały</option>
                             <option value="active">Tylko aktywne materiały</option>
                             <option value="inactive">Tylko nieaktywne materiały</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Dział</label>
-                        <select class="form-select">
+                        <label for="reportDepartment" class="form-label">Dział</label>
+                        <select class="form-select" id="reportDepartment">
                             <option value="all">Wszystkie działy</option>
                             {% for dept in departments %}
                                 <option value="{{ dept.id }}">{{ dept.name }}</option>
@@ -434,13 +663,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Format</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="reportFormat" id="formatPDF" checked>
-                            <label class="form-check-label" for="formatPDF">PDF</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="reportFormat" id="formatCSV">
-                            <label class="form-check-label" for="formatCSV">CSV</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="reportFormat" id="formatPDF" value="pdf" checked>
+                                <label class="form-check-label" for="formatPDF">PDF</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="reportFormat" id="formatCSV" value="csv">
+                                <label class="form-check-label" for="formatCSV">CSV</label>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -452,6 +683,9 @@
         </div>
     </div>
 </div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -463,7 +697,7 @@
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        
+
         // Funkcja do sprawdzania statusu odtwarzacza
         function checkPlayerStatus(standId) {
             return $.ajax({
@@ -474,12 +708,12 @@
                 }
             });
         }
-        
+
         // Funkcja do aktualizacji interfejsu
         function updatePlayerStatusUI(standId, data) {
             const statusElement = $(`#status-${standId}`);
             const textElement = $(`#status-text-${standId}`);
-            
+
             if (data.is_online) {
                 statusElement.removeClass('status-offline').addClass('status-online');
                 textElement.text('Online');
@@ -488,12 +722,12 @@
                 textElement.text('Offline');
             }
         }
-        
+
         // Sprawdź status wszystkich odtwarzaczy
         function checkAllPlayers() {
             let activeCount = 0;
             let totalCount = 0;
-            
+
             // Zbierz wszystkie ID stoisk
             const standIds = [];
             $('.status-indicator').each(function() {
@@ -501,7 +735,13 @@
                 standIds.push(id);
                 totalCount++;
             });
-            
+
+            // Jeśli nie ma stoisk, ustaw licznik na 0 i zakończ
+            if (standIds.length === 0) {
+                $('#activePlayersCount').text('0');
+                return;
+            }
+
             // Sprawdź status każdego stoiska
             const promises = standIds.map(id => {
                 return checkPlayerStatus(id)
@@ -511,21 +751,24 @@
                     })
                     .catch(err => {
                         console.error(`Błąd sprawdzania statusu dla stoiska ${id}:`, err);
+                        // Optionally set status to 'Nieznany' or similar on error
+                        $(`#status-${id}`).removeClass('status-online status-offline').css('background-color', '#6c757d'); // Grey
+                        $(`#status-text-${id}`).text('Błąd');
                     });
             });
-            
+
             Promise.all(promises).then(() => {
                 $('#activePlayersCount').text(activeCount);
             });
         }
-        
+
         // Przycisk sprawdzania statusu
         $('#checkStatusBtn, #refreshStatsBtn').on('click', function() {
             checkAllPlayers();
             // Pokaż powiadomienie o odświeżeniu
             showToast("Odświeżanie statusu odtwarzaczy...", "info");
         });
-        
+
         // Wykres typów materiałów
         const materialTypesCtx = document.getElementById('materialTypesChart').getContext('2d');
         const materialTypesChart = new Chart(materialTypesCtx, {
@@ -533,9 +776,9 @@
             data: {
                 labels: ['Obrazy', 'Wideo'],
                 datasets: [{
-                    data: [65, 35],
-                    backgroundColor: ['#36a2eb', '#ff6384'],
-                    hoverOffset: 4
+                    data: [65, 35], /* Example data - replace with actual dynamic data */
+                    backgroundColor: ['#007bff', '#28a745'], /* Bootstrap primary & success colors */
+                    hoverOffset: 8
                 }]
             },
             options: {
@@ -543,12 +786,34 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed + '%';
+                                }
+                                return label;
+                            }
+                        }
                     }
+                },
+                layout: {
+                    padding: 0
                 }
             }
         });
-        
+
         // Wykres statusu materiałów
         const materialStatusCtx = document.getElementById('materialStatusChart').getContext('2d');
         const materialStatusChart = new Chart(materialStatusCtx, {
@@ -556,9 +821,9 @@
             data: {
                 labels: ['Aktywne', 'Nieaktywne'],
                 datasets: [{
-                    data: [75, 25],
-                    backgroundColor: ['#4bc0c0', '#ff9f40'],
-                    hoverOffset: 4
+                    data: [75, 25], /* Example data - replace with actual dynamic data */
+                    backgroundColor: ['#17a2b8', '#ffc107'], /* Bootstrap info & warning colors */
+                    hoverOffset: 8
                 }]
             },
             options: {
@@ -566,16 +831,37 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed + '%';
+                                }
+                                return label;
+                            }
+                        }
                     }
+                },
+                layout: {
+                    padding: 0
                 }
             }
         });
-        
-        // Funkcja do wyświetlania powiadomień
-        function showToast(message, type) {
-            // Utwórz toast
-            const toast = $(`
+
+        // Funkcja do wyświetlania powiadomień (Toast)
+        function showToast(message, type = 'primary', delay = 3000) {
+            const toastHtml = `
                 <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
                     <div class="d-flex">
                         <div class="toast-body">
@@ -584,24 +870,22 @@
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
                 </div>
-            `);
-            
-            // Dodaj toast do kontenera
-            if (!$("#toast-container").length) {
-                $("body").append(`
-                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-                `);
+            `;
+
+            const toastContainer = $("#toast-container");
+            if (!toastContainer.length) {
+                // If container doesn't exist, create it
+                $('body').append('<div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>');
             }
-            $("#toast-container").append(toast);
-            
-            // Pokaż toast
-            const bsToast = new bootstrap.Toast(toast[0], {
-                delay: 3000
+            const toastElement = $(toastHtml);
+            $("#toast-container").append(toastElement);
+
+            const bsToast = new bootstrap.Toast(toastElement[0], {
+                delay: delay
             });
             bsToast.show();
-            
-            // Usuń toast po ukryciu
-            toast.on('hidden.bs.toast', function() {
+
+            toastElement.on('hidden.bs.toast', function () {
                 $(this).remove();
             });
         }

@@ -6,91 +6,143 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css">
 <style>
+        .container-fluid {
+        margin-bottom: 3rem;
+    }
+
     .material-card {
         cursor: grab;
-        margin-bottom: 15px;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        background-color: #fff;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
     }
+
     .material-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        transform: translateY(-4px);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
     }
+
     .material-card.ui-sortable-helper {
         cursor: grabbing;
-        transform: rotate(2deg) scale(1.02);
-        box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+        transform: scale(1.03);
+        box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.15);
     }
-    .material-actions {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(255,255,255,0.8);
-        border-radius: 4px;
-        padding: 5px;
-    }
+
     .material-preview {
-        height: 200px;
+        height: 160px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background-color: #f1f3f5;
+        border-top-left-radius: .5rem;
+        border-top-right-radius: .5rem;
         overflow: hidden;
-        background-color: #f8f9fa;
     }
-    .material-preview img {
-        max-height: 100%;
-        max-width: 100%;
-    }
+
+    .material-preview img,
     .material-preview video {
-        max-height: 100%;
         max-width: 100%;
+        max-height: 100%;
     }
+
+    .material-actions {
+        position: absolute;
+        top: .5rem;
+        right: .5rem;
+        background-color: rgba(255,255,255,0.85);
+        border-radius: .375rem;
+        padding: 0.25rem 0.5rem;
+        display: flex;
+        gap: .5rem;
+    }
+
     .status-badge {
         position: absolute;
-        top: 10px;
-        left: 10px;
+        top: .5rem;
+        left: .5rem;
+        font-size: .75rem;
+        padding: .25em .5em;
     }
-    #sortable-container {
-        min-height: 200px;
-    }
-    .empty-message {
-        padding: 30px;
-        text-align: center;
-        border: 2px dashed #dee2e6;
-        border-radius: 8px;
-        color: #6c757d;
-    }
+
     .order-number {
         position: absolute;
-        bottom: 10px;
-        left: 10px;
-        background-color: rgba(0,0,0,0.7);
+        bottom: .5rem;
+        right: .5rem;
+        font-size: .75rem;
+        background: rgba(0,0,0,0.7);
         color: white;
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
     }
-    .material-card.ui-sortable-placeholder {
-        border: 3px dashed #dee2e6;
+
+    .empty-message {
+        padding: 2rem;
+        border: 2px dashed #ced4da;
+        border-radius: .5rem;
+        text-align: center;
         background-color: #f8f9fa;
-        visibility: visible !important;
-        height: 200px;
-        opacity: 0.5;
+        color: #6c757d;
     }
+
     .drop-indicator {
         display: none;
-        padding: 20px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        border: 3px dashed #198754;
+        background-color: rgba(25,135,84,0.1);
+        color: #198754;
         text-align: center;
-        border: 3px dashed #28a745;
-        border-radius: 8px;
-        background-color: rgba(40, 167, 69, 0.1);
-        color: #28a745;
-        margin: 10px 0;
+        border-radius: .5rem;
     }
+
     .drop-active .drop-indicator {
         display: block;
+    }
+
+    .token-box {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        padding: .75rem;
+        border-radius: .5rem;
+        font-family: monospace;
+        word-break: break-all;
+        font-size: 0.9rem;
+    }
+
+    .qr-container {
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    .status-indicator {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: .5rem;
+    }
+
+    .status-online {
+        background-color: #198754;
+    }
+
+    .status-offline {
+        background-color: #dc3545;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-0.25rem);
+        transition: transform 0.2s ease;
+    }
+
+    .toast-container {
+        z-index: 1080;
     }
 </style>
 {% endblock %}
@@ -114,30 +166,7 @@
             </a>
         </div>
     </div>
-    
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-info-circle me-2"></i> Informacje o stoisku
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-4">
-                    <p><strong>Sklep:</strong> {{ stand.department.store.name }}</p>
-                    <p><strong>Dział:</strong> {{ stand.department.name }}</p>
-                </div>
-                <div class="col-md-4">
-                    <p><strong>Nazwa stoiska:</strong> {{ stand.name }}</p>
-                    <p><strong>Czas wyświetlania:</strong> {{ stand.display_time }} sekund</p>
-                </div>
-                <div class="col-md-4">
-                    <p><strong>Animacja przejścia:</strong> {{ stand.get_transition_animation_display }}</p>
-                    <p><strong>Liczba materiałów:</strong> {{ materials|length }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <div class="card">
         <div class="card-header bg-light">
@@ -205,9 +234,153 @@
         </div>
     </div>
 </div>
+
+    <div class="container">
+    <h2 class="mb-4">Panel Odtwarzacza</h2>
+
+    {% if stand %}
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Informacje o odtwarzaczu</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Dane przypisanego stoiska</h6>
+                                <p><strong>Nazwa stoiska:</strong> {{ stand.name }}</p>
+                                <p><strong>Dział:</strong> {{ stand.department.name }}</p>
+                                <p><strong>Sklep:</strong> {{ stand.department.store.name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Ustawienia wyświetlania</h6>
+                                <p><strong>Domyślny czas wyświetlania:</strong> {{ stand.display_time }} sekund</p>
+                                <p><strong>Animacja przejścia:</strong> {{ stand.get_transition_animation_display }}</p>
+                                <p><strong>Liczba materiałów:</strong> {{ stand.materials.count }}</p>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Token dostępu API</h5>
+                        <p class="text-muted">Ten token jest wymagany do uwierzytelnienia odtwarzacza. Nie udostępniaj go osobom niepowołanym.</p>
+
+                        <div class="token-box">{{ token }}</div>
+
+                        <div class="d-flex justify-content-between mt-3">
+                            <button class="btn btn-outline-secondary btn-sm" id="copyToken">
+                                <i class="fas fa-copy me-1"></i> Kopiuj token
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" id="resetToken">
+                                <i class="fas fa-sync-alt me-1"></i> Zresetuj token
+                            </button>
+                        </div>
+
+                        <hr>
+
+                        <h5 class="mb-3">Konfiguracja odtwarzacza</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="qr-container">
+                                    <div id="qrcode"></div>
+                                    <p class="mt-2 small text-muted">Zeskanuj kod QR, aby otworzyć odtwarzacz</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'player-view' %}?token={{ token }}&stand={{ stand.id }}" target="_blank" class="btn btn-primary">
+                                        <i class="fas fa-play-circle me-1"></i> Otwórz odtwarzacz
+                                    </a>
+                                    <a href="#" class="btn btn-outline-secondary" id="startFullscreen">
+                                        <i class="fas fa-expand me-1"></i> Tryb pełnoekranowy
+                                    </a>
+                                    <a href="#" class="btn btn-outline-info" id="downloadConfig">
+                                        <i class="fas fa-download me-1"></i> Pobierz konfigurację
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Status odtwarzacza</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="status-indicator status-offline" id="playerStatus"></span>
+                            <span id="statusText">Offline</span>
+                        </div>
+
+                        <p><strong>Ostatnia aktywność:</strong> <span id="lastActivity">Nigdy</span></p>
+                        <p><strong>Wersja aplikacji:</strong> <span id="playerVersion">-</span></p>
+                        <p><strong>Rozdzielczość:</strong> <span id="playerResolution">-</span></p>
+
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Status jest aktualizowany co 60 sekund. Naciśnij przycisk poniżej, aby odświeżyć ręcznie.
+                        </div>
+
+                        <div class="d-grid">
+                            <button class="btn btn-outline-primary" id="refreshStatus">
+                                <i class="fas fa-sync me-1"></i> Odśwież status
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-tasks me-2"></i>Szybkie akcje
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group">
+                                <a href="{% url 'material-create' stand_id=stand.id %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-plus-circle me-2"></i>Dodaj nowy materiał reklamowy
+                                </a>
+                                <a href="{% url 'player-view' %}?stand={{ stand.id }}" class="list-group-item list-group-item-action" target="_blank">
+                                    <i class="fas fa-play-circle me-2"></i>Podgląd odtwarzacza
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" onclick="downloadMaterialsReport(); return false;">
+                                    <i class="fas fa-file-download me-2"></i>Raport materiałów reklamowych
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+{#                <div class="card">#}
+{#                    <div class="card-header bg-light">#}
+{#                        <h5 class="mb-0">Pomoc</h5>#}
+{#                    </div>#}
+{#                    <div class="card-body">#}
+{#                        <h6>Jak uruchomić odtwarzacz?</h6>#}
+{#                        <ol class="small">#}
+{#                            <li>Kliknij "Otwórz odtwarzacz" lub zeskanuj kod QR</li>#}
+{#                            <li>W nowej karcie zaloguj się tokenem</li>#}
+{#                            <li>Włącz tryb pełnoekranowy (F11)</li>#}
+{#                        </ol>#}
+{#                        <hr>#}
+{#                        <p class="small">W przypadku problemów skontaktuj się z administratorem systemu.</p>#}
+{#                    </div>#}
+{#                </div>#}
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Ten odtwarzacz nie ma przypisanego stoiska. Skontaktuj się z administratorem systemu.
+        </div>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
 <script>
     $(function() {
@@ -301,6 +474,132 @@
             });
             bsToast.show();
             
+            // Usuń toast po ukryciu
+            toast.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+    });
+
+    function downloadMaterialsReport() {
+        // Przykładowa funkcja - w rzeczywistej aplikacji powinna wykonać żądanie AJAX
+        // i pobrać wygenerowany raport
+        alert('Funkcja generowania raportów będzie dostępna wkrótce.');
+    }
+
+    $(function() {
+        // Przykładowy kod inicjalizacyjny, który można rozbudować
+        console.log("Panel edytora załadowany");
+    });
+
+    $(function() {
+        // Inicjalizacja kodu QR
+        const playerUrl = "{% url 'player-view' %}?token={{ token }}&stand={{ stand.id }}";
+
+        new QRCode(document.getElementById("qrcode"), {
+            text: playerUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Kopiowanie tokenu
+        $("#copyToken").click(function() {
+            const tokenText = "{{ token }}";
+            navigator.clipboard.writeText(tokenText)
+                .then(() => {
+                    showToast("Token skopiowany do schowka", "success");
+                })
+                .catch(err => {
+                    showToast("Nie udało się skopiować tokenu", "danger");
+                    console.error('Błąd kopiowania: ', err);
+                });
+        });
+
+        // Reset tokenu (powinien być obsługiwany przez AJAX)
+        $("#resetToken").click(function() {
+            if (confirm("Czy na pewno chcesz zresetować token? Istniejące połączenia zostaną przerwane.")) {
+                // Tu powinno być żądanie AJAX do resetu tokenu
+                showToast("Funkcja w przygotowaniu", "warning");
+            }
+        });
+
+        // Otwieranie w trybie pełnoekranowym
+        $("#startFullscreen").click(function(e) {
+            e.preventDefault();
+            window.open(playerUrl, "_blank", "menubar=no,toolbar=no,location=no,status=no");
+        });
+
+        // Pobieranie konfiguracji
+        $("#downloadConfig").click(function(e) {
+            e.preventDefault();
+            const config = {
+                token: "{{ token }}",
+                stand_id: {{ stand.id }},
+                player_url: playerUrl,
+                api_url: window.location.origin + "/advertisements/api/stand/{{ stand.id }}/",
+                version: "1.0.0"
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "player_config.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+
+        // Symulacja statusu odtwarzacza (w rzeczywistym systemie powinno być pobierane z API)
+        $("#refreshStatus").click(function() {
+            // Symulujemy odpowiedź z API
+            const randomStatus = Math.random() > 0.3;  // 70% szans na online
+
+            if (randomStatus) {
+                $("#playerStatus").removeClass("status-offline").addClass("status-online");
+                $("#statusText").text("Online");
+                $("#lastActivity").text("Teraz");
+                $("#playerVersion").text("1.0.0");
+                $("#playerResolution").text("1920x1080");
+            } else {
+                $("#playerStatus").removeClass("status-online").addClass("status-offline");
+                $("#statusText").text("Offline");
+                // Pozostałe wartości bez zmian
+            }
+
+            showToast("Status odtwarzacza zaktualizowany", "success");
+        });
+
+        // Funkcja do wyświetlania powiadomień
+        function showToast(message, type) {
+            // Utwórz toast
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+
+            // Dodaj toast do kontenera
+            if (!$("#toast-container").length) {
+                $("body").append(`
+                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+                `);
+            }
+            $("#toast-container").append(toast);
+
+            // Pokaż toast
+            const bsToast = new bootstrap.Toast(toast[0], {
+                delay: 3000
+            });
+            bsToast.show();
+
             // Usuń toast po ukryciu
             toast.on('hidden.bs.toast', function() {
                 $(this).remove();
