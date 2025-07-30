@@ -28,7 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['zarzadzaniereklamami-production-e866.up.railway.app', 'kixggwp.pythonanywhere.com', '127.0.0.1']
 
-
 # Application definition
 
 INSTALLED_APPS = [
