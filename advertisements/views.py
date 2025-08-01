@@ -6,6 +6,7 @@ from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Store, Department, Stand, AdvertisementMaterial
 from accounts.permissions import SuperadminRequiredMixin, StoreAdminRequiredMixin, EditorRequiredMixin, StoreAccessMixin
@@ -17,18 +18,24 @@ class PlayerView(TemplateView):
     template_name = 'player/player.html'
 
 # Nowe widoki zarządzania materiałami
-class StandMaterialsView(EditorRequiredMixin, StoreAccessMixin, DetailView):
-    """
-    View for managing stand materials with drag & drop interface
-    """
+class StandMaterialsView(LoginRequiredMixin, DetailView):
     model = Stand
     template_name = 'advertisements/stand_materials.html'
-    context_object_name = 'stand'
+    context_object_name = 'stand'  # Upewnij się, że ta linia istnieje
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['materials'] = self.object.materials.all().order_by('order')
-        context['form'] = AdvertisementMaterialForm(initial={'stand': self.object})
+        
+        # Dodaj token dla odtwarzacza
+        from rest_framework.authtoken.models import Token
+        token, created = Token.objects.get_or_create(user=self.request.user)
+        context['token'] = token.key
+        
+        # Upewnij się, że stand jest w kontekście
+        if 'stand' not in context:
+            context['stand'] = self.object
+        
         return context
 
 @require_POST
