@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import FileExtensionValidator
 from cloudinary.models import CloudinaryField
+from .validators import CloudinaryFileExtensionValidator
 import cloudinary
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -77,15 +78,15 @@ class AdvertisementMaterial(models.Model):
     stand = models.ForeignKey(Stand, on_delete=models.CASCADE, related_name="materials", verbose_name="Stoisko")
     material_type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name="Typ materiału")
     file = CloudinaryField(
-        'file',
-        resource_type='auto',
-        folder='advertisements/',
-        transformation=[
-            {'fetch_format': 'auto', 'quality': 'auto'}
-        ],
-        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm'])],
-        help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm.",
-    )
+            'file',
+            resource_type='auto',
+            folder='advertisements/',
+            transformation=[
+                {'fetch_format': 'auto', 'quality': 'auto'}
+            ],
+            validators=[CloudinaryFileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm'])],
+            help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm.",
+        )
     order = models.PositiveIntegerField(default=0, verbose_name="Kolejność")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active', verbose_name="Status")
     duration = models.IntegerField(default=5, verbose_name="Czas wyświetlania (sekundy)")

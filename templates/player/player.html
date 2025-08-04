@@ -309,6 +309,7 @@
                 
                 const data = await response.json();
                 
+                
                 if (!data.materials || data.materials.length === 0) {
                     showError('Brak materiałów do wyświetlenia dla tego stoiska.');
                     await reportStatus('Brak materiałów do wyświetlenia.');
