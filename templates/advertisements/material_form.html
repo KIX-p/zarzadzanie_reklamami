@@ -48,6 +48,29 @@
                                 <div class="text-danger">{{ form.file.errors }}</div>
                             {% endif %}
                         </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.never_expires }}
+                                <label for="{{ form.never_expires.id_for_label }}" class="form-check-label">
+                                    {{ form.never_expires.label }}
+                                </label>
+                                <small class="form-text text-muted d-block">
+                                    {{ form.never_expires.help_text }}
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="expires-at-container">
+                            <label for="{{ form.expires_at.id_for_label }}" class="form-label">Data wygaśnięcia</label>
+                            {{ form.expires_at }}
+                            <small class="form-text text-muted">
+                                Po tej dacie materiał zostanie automatycznie usunięty.
+                            </small>
+                            {% if form.expires_at.errors %}
+                                <div class="text-danger">{{ form.expires_at.errors }}</div>
+                            {% endif %}
+                        </div>
                         
                         {% if form.instance.file %}
                             <div class="mb-3">
@@ -95,6 +118,30 @@
 {% endblock %}
 
 {% block extra_js %}
+
+<script>
+    $(function() {
+        const neverExpiresCheckbox = $('#{{ form.never_expires.id_for_label }}');
+        const expiresAtContainer = $('#expires-at-container');
+        const expiresAtInput = $('#{{ form.expires_at.id_for_label }}');
+        
+        function toggleExpirationField() {
+            if (neverExpiresCheckbox.is(':checked')) {
+                expiresAtContainer.hide();
+                expiresAtInput.prop('required', false);
+            } else {
+                expiresAtContainer.show();
+                expiresAtInput.prop('required', true);
+            }
+        }
+        
+        // Inicjalizacja
+        toggleExpirationField();
+        
+        // Obsługa zmian
+        neverExpiresCheckbox.change(toggleExpirationField);
+    });
+</script>
 <script>
     // Dynamicznie aktualizuj podpowiedzi dotyczące formatu pliku
     $(function() {

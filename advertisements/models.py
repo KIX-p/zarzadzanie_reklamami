@@ -87,6 +87,7 @@ class AdvertisementMaterial(models.Model):
             validators=[CloudinaryFileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm'])],
             help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm.",
         )
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Data wygaśnięcia")
     order = models.PositiveIntegerField(default=0, verbose_name="Kolejność")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active', verbose_name="Status")
     duration = models.IntegerField(default=5, verbose_name="Czas wyświetlania (sekundy)")
@@ -97,6 +98,14 @@ class AdvertisementMaterial(models.Model):
         verbose_name = "Materiał reklamowy"
         verbose_name_plural = "Materiały reklamowe"
         ordering = ['order']
+
+    @property
+    def is_expired(self):
+        """Sprawdza czy materiał wygasł"""
+        if self.expires_at is None:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
         
     def delete(self, *args, **kwargs):
         logger.debug(f"Wywołano delete() dla AdvertisementMaterial id={self.id}")
