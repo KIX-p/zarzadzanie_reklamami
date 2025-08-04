@@ -107,6 +107,7 @@ class MaterialUpdateView(EditorRequiredMixin, StoreAccessMixin, UpdateView):
         messages.success(self.request, "Materiał został zaktualizowany.")
         return response
 
+
 class MaterialDeleteView(EditorRequiredMixin, StoreAccessMixin, DeleteView):
     model = AdvertisementMaterial
     template_name = 'advertisements/material_confirm_delete.html'

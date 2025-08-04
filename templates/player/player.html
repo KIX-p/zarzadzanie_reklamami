@@ -212,8 +212,7 @@
         let materials = [];
         let currentIndex = 0;
         let carouselContainer = document.querySelector('.carousel-container');
-        {#let transitionType = 'fade'; // Default transition#}
-        const transitionType = "{{ stand.transition_animation }}";
+        let transitionType = "{{ stand.transition_animation }}";
         let isPlaying = false;
         let isOnline = true;
         

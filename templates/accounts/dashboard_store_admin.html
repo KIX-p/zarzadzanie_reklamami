@@ -294,25 +294,7 @@
                 <p class="text-muted mt-1 mb-0">Zarządzaj sklepem <strong class="text-primary">{{ store.name }}</strong> i jego zasobami.</p>
             {% endif %}
         </div>
-        <div class="col-md-4 text-md-end mt-3 mt-md-0">
-            <div class="btn-group w-100 w-md-auto">
-                <a href="{% url 'department-create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i>Nowy dział
-                </a>
-                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="visually-hidden">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{% url 'store-detail' pk=store.id %}">
-                        <i class="fas fa-store me-2"></i>Szczegóły sklepu
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#" id="refreshStatsBtn">
-                        <i class="fas fa-sync me-2"></i>Odśwież dane
-                    </a></li>
-                </ul>
-            </div>
-        </div>
+
     </div>
 
     {% if store %}
@@ -381,9 +363,6 @@
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Działy w sklepie</h5>
-                            <a href="{% url 'department-create' %}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-plus me-1"></i>Dodaj dział
-                            </a>
                         </div>
                     </div>
                     <div class="card-body">
@@ -527,46 +506,6 @@
 
                 <div class="card mb-4">
                     <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Ostatnie aktywności</h5>
-                            <span class="badge bg-primary notification-badge">5 nowych</span>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="list-group list-group-flush">
-                            <div class="activity-item list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">Dodano nowy materiał</h6>
-                                    <small class="text-muted">2 godz. temu</small>
-                                </div>
-                                <p class="mb-1">Edytor Jan Kowalski dodał nowy materiał do stoiska "AGD"</p>
-                                <small class="text-muted">Dział: Elektronika</small>
-                            </div>
-                            <div class="activity-item list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">Zmieniono kolejność</h6>
-                                    <small class="text-muted">4 godz. temu</small>
-                                </div>
-                                <p class="mb-1">Zmieniono kolejność wyświetlania materiałów na stoisku "Perfumy"</p>
-                                <small class="text-muted">Dział: Kosmetyki</small>
-                            </div>
-                            <div class="activity-item list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">Dodano nowe stoisko</h6>
-                                    <small class="text-muted">wczoraj</small>
-                                </div>
-                                <p class="mb-1">Utworzono nowe stoisko "Wyprzedaż" w dziale "Odzież"</p>
-                                <small class="text-muted">Admin: System</small>
-                            </div>
-                        </div>
-                        <div class="p-3 text-center border-top">
-                            <button class="btn btn-sm btn-outline-secondary">Zobacz wszystkie aktywności</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">
                         <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Szybkie akcje</h5>
                     </div>
                     <div class="card-body p-0">
@@ -583,43 +522,6 @@
                             <a href="#" class="list-group-item list-group-item-action" id="checkStatusBtn">
                                 <i class="fas fa-sync me-2 fa-fw"></i>Sprawdź status odtwarzaczy
                             </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Powiadomienia</h5>
-                            <span class="badge bg-danger notification-badge">3</span>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="list-group list-group-flush">
-                            <a href="#" class="list-group-item list-group-item-action py-3">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <h6 class="mb-1">Nieaktywny odtwarzacz</h6>
-                                    <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Wymaga działania</small>
-                                </div>
-                                <p class="mb-1 small">Stoisko "Promocje" jest offline od 24 godzin.</p>
-                            </a>
-                            <a href="#" class="list-group-item list-group-item-action py-3">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <h6 class="mb-1">Brak materiałów</h6>
-                                    <small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Zalecane działanie</small>
-                                </div>
-                                <p class="mb-1 small">Stoisko "Kasa 3" nie ma żadnych materiałów reklamowych.</p>
-                            </a>
-                            <a href="#" class="list-group-item list-group-item-action py-3">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <h6 class="mb-1">Nowy użytkownik</h6>
-                                    <small class="text-info"><i class="fas fa-info-circle me-1"></i>Informacja</small>
-                                </div>
-                                <p class="mb-1 small">Zarejestrowano nowego edytora. Przypisz mu stoisko.</p>
-                            </a>
-                        </div>
-                        <div class="p-3 text-center border-top">
-                            <button class="btn btn-sm btn-outline-secondary">Oznacz wszystkie jako przeczytane</button>
                         </div>
                     </div>
                 </div>
