@@ -367,6 +367,22 @@
             // Start the carousel
             isPlaying = true;
             showSlide(0);
+
+            let totalDuration = 0;
+
+            materials.forEach((material) => {
+                let duration = parseInt(material.duration);
+                if (!duration || isNaN(duration)) {
+                    duration = window.displayTime;
+                }
+                totalDuration += duration;
+            });
+
+            // Odśwież stronę po przejściu wszystkich materiałów
+            setTimeout(() => {
+                console.log('Odświeżanie strony po pełnym cyklu materiałów...');
+                window.location.reload();
+            }, totalDuration * 1000);
         }
 
         // Show slide at specified index

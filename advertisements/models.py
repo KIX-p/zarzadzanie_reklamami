@@ -101,11 +101,20 @@ class AdvertisementMaterial(models.Model):
 
     @property
     def is_expired(self):
-        """Sprawdza czy materiał wygasł"""
+        """Sprawdza czy materiał wygasł i ustawia status na nieaktywny"""
         if self.expires_at is None:
             return False
+
         from django.utils import timezone
-        return timezone.now() > self.expires_at
+        if timezone.now() > self.expires_at:
+            if self.status != 'inactive':
+                self.status = 'inactive'
+                try:
+                    self.save(update_fields=["status"])
+                except Exception as e:
+                    logger.warning(f"Błąd podczas automatycznej zmiany statusu na 'inactive': {e}")
+            return True
+        return False
         
     def delete(self, *args, **kwargs):
         logger.debug(f"Wywołano delete() dla AdvertisementMaterial id={self.id}")
