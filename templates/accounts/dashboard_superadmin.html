@@ -47,14 +47,7 @@
     
     <!-- Dashboard overview -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Sklepy</h5>
-                    <h2>{{ stores|length }}</h2>
-                </div>
-            </div>
-        </div>
+
         <div class="col-md-3">
             <div class="card bg-success text-white">
                 <div class="card-body">
@@ -71,16 +64,30 @@
                 </div>
             </div>
         </div>
+
+                <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Sklepy</h5>
+                    {% for store in stores %}
+                    <h2>{{ store.name }}</h2>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <div class="col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body">
-                    <h5 class="card-title">Użytkownicy</h5>
-                    <h2>{{ users_count }}</h2>
+                    <h5 class="card-title">Lokacja</h5>
+                    {% for store in stores %}
+                    <h2>{{ store.location }}</h2>
+                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="card mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Monitorowanie odtwarzaczy</h5>
@@ -92,8 +99,6 @@
             <div class="row" id="playersMonitor">
                 {% for store in stores %}
                     <div class="col-12 store-section">
-                        <h5 class="mb-3">{{ store.name }}</h5>
-                        
                         <div class="row">
                             {% for department in store.departments.all %}
                                 {% for stand in department.stands.all %}

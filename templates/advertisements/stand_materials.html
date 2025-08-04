@@ -148,6 +148,23 @@
 {% endblock %}
 
 {% block content %}
+    <div class="modal fade" id="animationModal" tabindex="-1" aria-labelledby="animationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="animationModalLabel">Zmień animację przejścia</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+          </div>
+          <div class="modal-body" id="animationModalBody">
+            <div class="text-center p-3">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Ładowanie...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 <div class="container-fluid">
     <div class="row mb-4 align-items-center">
         <div class="col">
@@ -258,6 +275,9 @@
                                 <p><strong>Domyślny czas wyświetlania:</strong> {{ stand.display_time }} sekund</p>
                                 <p><strong>Animacja przejścia:</strong> {{ stand.get_transition_animation_display }}</p>
                                 <p><strong>Liczba materiałów:</strong> {{ stand.materials.count }}</p>
+                                <a href="{% url 'stand-animation-update' pk=stand.id %}" class="btn btn-outline-secondary btn-sm" id="openAnimationModal">
+                                    <i class="fas fa-magic me-1"></i> Zmień animację przejścia
+                                </a>
                             </div>
                         </div>
 
@@ -606,5 +626,40 @@
             });
         }
     });
+
+    $(function () {
+        $("#openAnimationModal").click(function (e) {
+                e.preventDefault();
+
+                const url = $(this).attr("href");
+                $("#animationModal").modal("show");
+
+                $.get(url, function (data) {
+                    const formHtml = $(data).find("form");
+                    $("#animationModalBody").html(formHtml);
+
+                    // Ponowna inicjalizacja przycisku submit
+                    $("#animationModalBody form").on("submit", function (e) {
+                        e.preventDefault();
+                        const form = $(this);
+                        const actionUrl = form.attr("action") || url;
+
+                        $.post(actionUrl, form.serialize(), function (response) {
+                            if ($(response).find("form").length) {
+                                // Błędy walidacji — pokaż ponownie formularz
+                                const newForm = $(response).find("form");
+                                $("#animationModalBody").html(newForm);
+                            } else {
+                                // Zakładamy, że przekierowanie = sukces
+                                $("#animationModal").modal("hide");
+                                showToast("Zapisano zmianę animacji", "success");
+                                // Możesz dodać kod do odświeżenia części strony, jeśli trzeba
+                                location.reload();
+                            }
+                        });
+                    });
+                });
+            });
+        });
 </script>
 {% endblock %}

@@ -36,4 +36,7 @@ urlpatterns = [
     path('stand/create/<int:department_id>/', views.StandCreateView.as_view(), name='stand-create'),
     path('stand/<int:pk>/update/', views.StandUpdateView.as_view(), name='stand-update'),
     path('stand/<int:pk>/delete/', views.StandDeleteView.as_view(), name='stand-delete'),
+
+    path('stands/<int:pk>/animation/', views.StandAnimationUpdateView.as_view(), name='stand-animation-update'),
+
 ]

@@ -6,10 +6,11 @@ from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
+from rest_framework.authtoken.models import Token
 
 from .models import Store, Department, Stand, AdvertisementMaterial
 from accounts.permissions import SuperadminRequiredMixin, StoreAdminRequiredMixin, EditorRequiredMixin, StoreAccessMixin
-from .forms import AdvertisementMaterialForm
+from .forms import AdvertisementMaterialForm, StandAnimationForm
 
 # Istniejący widok PlayerView
 class PlayerView(TemplateView):
@@ -24,13 +25,16 @@ class StandMaterialsView(EditorRequiredMixin, StoreAccessMixin, DetailView):
     model = Stand
     template_name = 'advertisements/stand_materials.html'
     context_object_name = 'stand'
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['materials'] = self.object.materials.all().order_by('order')
         context['form'] = AdvertisementMaterialForm(initial={'stand': self.object})
-        return context
 
+        # Tutaj mamy dostęp do self.request
+        token, created = Token.objects.get_or_create(user=self.request.user)
+        context['token'] = token.key
+        return context
 @require_POST
 @login_required
 def update_material_order(request, stand_id):
@@ -295,3 +299,13 @@ class StandDeleteView(StoreAdminRequiredMixin, StoreAccessMixin, DeleteView):
         stand = self.get_object()
         messages.success(self.request, f"Stoisko '{stand.name}' zostało usunięte.")
         return super().delete(request, *args, **kwargs)
+
+
+class StandAnimationUpdateView(EditorRequiredMixin, StoreAccessMixin, UpdateView):
+    model = Stand
+    form_class = StandAnimationForm
+    template_name = 'advertisements/stand_animation_form.html'
+
+    def get_success_url(self):
+        messages.success(self.request, "Animacja została zaktualizowana.")
+        return reverse('stand-materials', kwargs={'pk': self.object.pk})

@@ -34,3 +34,25 @@ class AdvertisementMaterialForm(forms.ModelForm):
                 self.fields['stand'].widget.attrs['readonly'] = True
                 if not self.initial.get('stand'):
                     self.initial['stand'] = user.managed_stand
+
+
+class StandAnimationForm(forms.ModelForm):
+    class Meta:
+        model = Stand
+        fields = ['transition_animation']
+        labels = {
+            'transition_animation': 'Animacja przejścia między materiałami',
+        }
+        widgets = {
+            'transition_animation': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Możesz dodać ewentualne sprawdzenie dostępu do stoiska
+        if user and user.is_editor() and user.managed_stand:
+            # Edytor może edytować tylko swoje stanowisko
+            if self.instance != user.managed_stand:
+                self.fields['transition_animation'].disabled = True

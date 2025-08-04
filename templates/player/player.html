@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Mozilla+Headline:wght@200..700&family=Varela+Round&display=swap" rel="stylesheet">
     <title>Odtwarzacz reklam</title>
     <style>
         body, html {
@@ -11,6 +14,7 @@
             height: 100%;
             overflow: hidden;
             background-color: #000;
+            font-family: "Varela Round", sans-serif;
         }
         
         .carousel-container {
@@ -194,6 +198,7 @@
         // Get token and stand ID from URL params or localStorage
         const token = urlParams.get('token') || localStorage.getItem(TOKEN_KEY);
         const standId = urlParams.get('stand') || localStorage.getItem(STAND_ID_KEY);
+        console.log(standId)
         
         // Debug mode
         const debugMode = urlParams.get('debug') === '1';
@@ -207,7 +212,8 @@
         let materials = [];
         let currentIndex = 0;
         let carouselContainer = document.querySelector('.carousel-container');
-        let transitionType = 'fade'; // Default transition
+        {#let transitionType = 'fade'; // Default transition#}
+        const transitionType = "{{ stand.transition_animation }}";
         let isPlaying = false;
         let isOnline = true;
         

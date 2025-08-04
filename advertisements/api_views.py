@@ -49,6 +49,7 @@ def stand_materials(request, stand_id):
     """
     try:
         stand = Stand.objects.get(pk=stand_id)
+        print(stand)
         
         # Check permissions
         if not IsPlayerOrAdmin().has_object_permission(request, None, stand):
@@ -56,6 +57,7 @@ def stand_materials(request, stand_id):
                           status=status.HTTP_403_FORBIDDEN)
         
         serializer = StandSerializer(stand, context={'request': request})
+        print(serializer)
         return Response(serializer.data)
     
     except Stand.DoesNotExist:
