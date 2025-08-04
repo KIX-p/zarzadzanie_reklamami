@@ -9,9 +9,11 @@ from django.views.decorators.http import require_POST
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .models import Store, Department, Stand, AdvertisementMaterial
+from datetime import datetime, timedelta
+
+from .models import Store, Department, Stand, AdvertisementMaterial, EmissionSchedule
 from accounts.permissions import SuperadminRequiredMixin, StoreAdminRequiredMixin, EditorRequiredMixin, StoreAccessMixin
-from .forms import AdvertisementMaterialForm, StandAnimationForm
+from .forms import AdvertisementMaterialForm, StandAnimationForm, EmissionScheduleForm
 
 # Istniejący widok PlayerView
 class PlayerView(TemplateView):
@@ -308,3 +310,131 @@ class StandAnimationUpdateView(EditorRequiredMixin, StoreAccessMixin, UpdateView
     def get_success_url(self):
         messages.success(self.request, "Animacja została zaktualizowana.")
         return reverse('stand-materials', kwargs={'pk': self.object.pk})
+
+
+class ScheduleCalendarView(ListView):
+    model = EmissionSchedule
+    template_name = 'advertisements/schedule_calendar.html'
+    context_object_name = 'schedules'
+    
+    def get_queryset(self):
+        stand_id = self.kwargs.get('stand_id')
+        return EmissionSchedule.objects.filter(
+            material__stand_id=stand_id
+        ).select_related('material')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        stand_id = self.kwargs.get('stand_id')
+        stand = get_object_or_404(Stand, id=stand_id)
+        context['stand'] = stand
+        context['materials'] = stand.materials.all()
+        return context
+
+class ScheduleCreateView(EditorRequiredMixin, StoreAccessMixin, CreateView):
+    model = EmissionSchedule
+    form_class = EmissionScheduleForm
+    template_name = 'advertisements/schedule_form.html'
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        material_id = self.kwargs.get('material_id')
+        if material_id:
+            initial['material'] = get_object_or_404(AdvertisementMaterial, id=material_id)
+        return initial
+    
+    def form_valid(self, form):
+        material_id = self.kwargs.get('material_id')
+        form.instance.material_id = material_id
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('schedule-calendar', kwargs={'stand_id': self.object.material.stand.id})
+
+class ScheduleUpdateView(EditorRequiredMixin, StoreAccessMixin, UpdateView):
+    model = EmissionSchedule
+    form_class = EmissionScheduleForm
+    template_name = 'advertisements/schedule_form.html'
+    
+    def get_success_url(self):
+        return reverse('schedule-calendar', kwargs={'stand_id': self.object.material.stand.id})
+
+class ScheduleDeleteView(EditorRequiredMixin, StoreAccessMixin, DeleteView):
+    model = EmissionSchedule
+    template_name = 'advertisements/schedule_confirm_delete.html'
+    
+    def get_success_url(self):
+        return reverse('schedule-calendar', kwargs={'stand_id': self.object.material.stand.id})
+
+def get_schedule_events(request, stand_id):
+    """API endpoint do pobierania wydarzeń kalendarza w formacie JSON dla FullCalendar"""
+    start_date = request.GET.get('start')
+    end_date = request.GET.get('end')
+    
+    if start_date and end_date:
+        start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    else:
+        # Domyślny zakres: bieżący miesiąc
+        today = datetime.today()
+        start = datetime(today.year, today.month, 1)
+        end = start + timedelta(days=42)  # 6 tygodni
+    
+    schedules = EmissionSchedule.objects.filter(
+        material__stand_id=stand_id
+    ).select_related('material')
+    
+    events = []
+    for schedule in schedules:
+        # Podstawowe informacje o wydarzeniu
+        event = {
+            'id': schedule.id,
+            'title': f"{schedule.name} - {schedule.material.get_material_type_display()}",
+            'start': f"{schedule.start_date.isoformat()}T{schedule.start_time.isoformat()}",
+            'end': f"{schedule.start_date.isoformat()}T{schedule.end_time.isoformat()}",
+            'backgroundColor': '#3788d8' if schedule.material.material_type == 'image' else '#e83e8c',
+            'borderColor': '#3788d8' if schedule.material.material_type == 'image' else '#e83e8c',
+            'textColor': '#ffffff',
+            'extendedProps': {
+                'material_id': schedule.material.id,
+                'material_type': schedule.material.material_type,
+                'repeat_type': schedule.repeat_type,
+                'priority': schedule.priority
+            }
+        }
+        
+        # Jeśli jest to wydarzenie powtarzające się, dodaj odpowiednie właściwości
+        if schedule.repeat_type == 'daily':
+            event['daysOfWeek'] = [0, 1, 2, 3, 4, 5, 6]
+            event['startTime'] = schedule.start_time.isoformat()
+            event['endTime'] = schedule.end_time.isoformat()
+            event['startRecur'] = schedule.start_date.isoformat()
+            if schedule.end_date:
+                event['endRecur'] = schedule.end_date.isoformat()
+        elif schedule.repeat_type == 'weekly' and schedule.repeat_days:
+            event['daysOfWeek'] = schedule.repeat_days
+            event['startTime'] = schedule.start_time.isoformat()
+            event['endTime'] = schedule.end_time.isoformat()
+            event['startRecur'] = schedule.start_date.isoformat()
+            if schedule.end_date:
+                event['endRecur'] = schedule.end_date.isoformat()
+        elif schedule.repeat_type == 'monthly':
+            # Dla wydarzeń miesięcznych, generuj pojedyncze wydarzenia
+            current_date = schedule.start_date
+            while current_date <= (schedule.end_date or end.date()):
+                if current_date.day == schedule.start_date.day and current_date >= start.date():
+                    monthly_event = event.copy()
+                    monthly_event['start'] = f"{current_date.isoformat()}T{schedule.start_time.isoformat()}"
+                    monthly_event['end'] = f"{current_date.isoformat()}T{schedule.end_time.isoformat()}"
+                    events.append(monthly_event)
+                
+                # Przejdź do następnego miesiąca
+                month = current_date.month + 1
+                year = current_date.year + (month > 12)
+                month = month % 12 or 12
+                current_date = current_date.replace(year=year, month=month)
+            continue  # Przejdź do następnego harmonogramu (pominięcie append na końcu)
+        
+        events.append(event)
+    
+    return JsonResponse(events, safe=False)

@@ -1,0 +1,316 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kalendarz emisji - {{ stand.name }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+<style>
+    .fc-event {
+        cursor: pointer;
+    }
+    
+    .calendar-container {
+        margin-bottom: 30px;
+    }
+    
+    .legend {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-right: 20px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+        border-radius: 3px;
+    }
+    
+    .tooltip-inner {
+        max-width: 300px;
+        text-align: left;
+    }
+    
+    .priority-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    .priority-high {
+        background-color: #dc3545;
+    }
+    
+    .priority-medium {
+        background-color: #ffc107;
+    }
+    
+    .priority-low {
+        background-color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'stand-materials' pk=stand.id %}">{{ stand.name }}</a></li>
+                    <li class="breadcrumb-item active">Kalendarz emisji</li>
+                </ol>
+            </nav>
+            <h2>Kalendarz emisji materiałów - {{ stand.name }}</h2>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#materialSelectModal">
+                <i class="fas fa-plus me-1"></i>Dodaj harmonogram
+            </button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #3788d8;"></div>
+                    <div>Obrazy</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e83e8c;"></div>
+                    <div>Filmy</div>
+                </div>
+                <div class="legend-item">
+                    <span class="priority-indicator priority-high"></span>
+                    <div>Wysoki priorytet (8-10)</div>
+                </div>
+                <div class="legend-item">
+                    <span class="priority-indicator priority-medium"></span>
+                    <div>Średni priorytet (4-7)</div>
+                </div>
+                <div class="legend-item">
+                    <span class="priority-indicator priority-low"></span>
+                    <div>Niski priorytet (1-3)</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="calendar-container">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal wyboru materiału -->
+<div class="modal fade" id="materialSelectModal" tabindex="-1" aria-labelledby="materialSelectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="materialSelectModalLabel">Wybierz materiał</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    {% for material in materials %}
+                        <a href="{% url 'schedule-create' material_id=material.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if material.material_type == 'image' %}
+                                        <i class="fas fa-image fa-2x text-primary"></i>
+                                    {% else %}
+                                        <i class="fas fa-film fa-2x text-danger"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">{{ material.get_material_type_display }}</h6>
+                                    <small>Dodano: {{ material.created_at|date:"d.m.Y" }}</small>
+                                </div>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="alert alert-info mb-0">
+                            Brak materiałów reklamowych dla tego stoiska.
+                            <a href="{% url 'material-create' stand_id=stand.id %}" class="alert-link">Dodaj materiał</a>, aby utworzyć harmonogram.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ze szczegółami harmonogramu -->
+<div class="modal fade" id="scheduleDetailsModal" tabindex="-1" aria-labelledby="scheduleDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="scheduleDetailsModalLabel">Szczegóły harmonogramu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="scheduleDetailsContent">
+                <!-- Zawartość wypełniana przez JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="editScheduleLink" class="btn btn-primary">Edytuj</a>
+                <a href="#" id="deleteScheduleLink" class="btn btn-danger">Usuń</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pl.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('calendar');
+        
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            locale: 'pl',
+            slotMinTime: '08:00:00',
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+            height: 'auto',
+            nowIndicator: true,
+            businessHours: {
+                daysOfWeek: [1, 2, 3, 4, 5], // Poniedziałek - Piątek
+                startTime: '08:00',
+                endTime: '20:00',
+            },
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            },
+            events: {
+                url: '{% url "api-schedule-events" stand_id=stand.id %}',
+                failure: function() {
+                    alert('Wystąpił błąd podczas pobierania harmonogramów.');
+                }
+            },
+            eventDidMount: function(info) {
+                // Dodaj tooltip do wydarzeń
+                const event = info.event;
+                const priority = event.extendedProps.priority;
+                let priorityClass = 'priority-low';
+                
+                if (priority >= 8) {
+                    priorityClass = 'priority-high';
+                } else if (priority >= 4) {
+                    priorityClass = 'priority-medium';
+                }
+                
+                const startTime = event.start ? event.start.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
+                const endTime = event.end ? event.end.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
+
+                const tooltip = `
+                    <div>
+                        <div class="mb-2"><strong>${event.title}</strong></div>
+                        <div><strong>Czas:</strong> ${startTime} - ${endTime}</div>
+                        <div><strong>Powtarzanie:</strong> ${getRepeatTypeDisplay(event.extendedProps.repeat_type)}</div>
+                        <div><strong>Priorytet:</strong> <span class="priority-indicator ${priorityClass}"></span> ${priority}/10</div>
+                    </div>
+                `;
+                
+                new bootstrap.Tooltip(info.el, {
+                    title: tooltip,
+                    placement: 'top',
+                    html: true,
+                    container: 'body'
+                });
+            },
+            eventClick: function(info) {
+                showScheduleDetails(info.event.id);
+            }
+        });
+        
+        calendar.render();
+        
+        // Funkcja pomocnicza do wyświetlania nazwy typu powtarzania
+        function getRepeatTypeDisplay(repeatType) {
+            const repeatTypes = {
+                'none': 'Bez powtarzania',
+                'daily': 'Codziennie',
+                'weekly': 'Co tydzień',
+                'monthly': 'Co miesiąc',
+                'custom': 'Niestandardowy'
+            };
+            
+            return repeatTypes[repeatType] || repeatType;
+        }
+        
+        // Funkcja do wyświetlania szczegółów harmonogramu
+        function showScheduleDetails(scheduleId) {
+            // W rzeczywistym przypadku dane pobierane byłyby z API
+            // Tutaj użyjmy prostego placeholdera
+            const modalBody = document.getElementById('scheduleDetailsContent');
+            const editLink = document.getElementById('editScheduleLink');
+            const deleteLink = document.getElementById('deleteScheduleLink');
+            
+            // Aktualizacja linków
+            editLink.href = `/advertisements/schedule/${scheduleId}/update/`;
+            deleteLink.href = `/advertisements/schedule/${scheduleId}/delete/`;
+            
+            // Pokaż modal z placeholderem
+            modalBody.innerHTML = `<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Ładowanie...</span></div></div>`;
+            
+            // W rzeczywistym przypadku wykonaj zapytanie AJAX do pobrania szczegółów
+            // fetch(`/advertisements/api/schedule/${scheduleId}/`)
+            //     .then(response => response.json())
+            //     .then(data => { ... });
+            
+            // Placeholder dla demonstracji
+            setTimeout(() => {
+                const event = calendar.getEventById(scheduleId);
+                if (event) {
+                    const repeatType = getRepeatTypeDisplay(event.extendedProps.repeat_type);
+                    const priority = event.extendedProps.priority;
+                    const materialType = event.extendedProps.material_type === 'image' ? 'Obraz' : 'Film';
+                    
+                    const startTime = event.start ? event.start.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
+                    const endTime = event.end ? event.end.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
+                    const startDate = event.start ? event.start.toLocaleDateString('pl-PL') : '-';
+
+                    modalBody.innerHTML = `
+                        <div>
+                            <h5>${event.title}</h5>
+                            <hr>
+                            <p><strong>Typ materiału:</strong> ${materialType}</p>
+                            <p><strong>Data i godzina:</strong> ${startDate} ${startTime} - ${endTime}</p>
+                            <p><strong>Typ powtarzania:</strong> ${repeatType}</p>
+                            <p><strong>Priorytet:</strong> ${priority}/10</p>
+                        </div>
+                    `;
+                } else {
+                    modalBody.innerHTML = `<div class="alert alert-danger">Nie znaleziono harmonogramu o ID: ${scheduleId}</div>`;
+                }
+            }, 500);
+            
+            const modal = new bootstrap.Modal(document.getElementById('scheduleDetailsModal'));
+            modal.show();
+        }
+    });
+</script>
+{% endblock %}

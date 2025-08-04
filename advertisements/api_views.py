@@ -6,7 +6,7 @@ from django.utils import timezone
 from .models import PlayerStatus
 
 
-from .models import Stand, AdvertisementMaterial
+from .models import Stand, AdvertisementMaterial, EmissionSchedule
 from .serializers import StandSerializer, AdvertisementMaterialSerializer
 from accounts.models import User
 
@@ -46,19 +46,65 @@ def stand_materials(request, stand_id):
     """
     Get all materials for a specific stand.
     Used by the player to display the carousel.
+    Uwzględnia harmonogram emisji.
     """
     try:
         stand = Stand.objects.get(pk=stand_id)
-        print(stand)
         
         # Check permissions
         if not IsPlayerOrAdmin().has_object_permission(request, None, stand):
             return Response({"error": "Nie masz uprawnień do tego stoiska"}, 
                           status=status.HTTP_403_FORBIDDEN)
         
+        # Aktualna data i czas
+        now = timezone.now()
+        current_time = now.time()
+        current_date = now.date()
+        current_weekday = now.weekday()
+        
+        # Pobierz wszystkie materiały dla stoiska
+        materials = AdvertisementMaterial.objects.filter(stand=stand, status='active')
+        
+        # Pobierz aktywne harmonogramy dla stoiska
+        schedules = EmissionSchedule.objects.filter(
+            material__stand=stand, 
+            is_active=True,
+            start_time__lte=current_time,
+            end_time__gte=current_time
+        ).order_by('-priority')
+        
+        # Filtruj harmonogramy według daty i typu powtarzania
+        active_schedules = []
+        for schedule in schedules:
+            if schedule.is_scheduled_for_date(current_date):
+                active_schedules.append(schedule)
+        
+        # Jeśli są aktywne harmonogramy, używaj tylko materiałów z harmonogramów
+        materials_ids = []
+        if active_schedules:
+            materials_ids = [s.material_id for s in active_schedules]
+            materials = materials.filter(id__in=materials_ids)
+        
+        # Serializuj stoisko wraz z materiałami
         serializer = StandSerializer(stand, context={'request': request})
-        print(serializer)
-        return Response(serializer.data)
+        data = serializer.data
+        
+        # Jeśli używamy harmonogramów, zastąp materiały tymi z harmonogramów w odpowiedniej kolejności
+        if active_schedules:
+            # Sortuj materiały według priorytetu harmonogramu
+            priority_map = {s.material_id: s.priority for s in active_schedules}
+            materials_data = []
+            
+            for material in materials:
+                material_data = AdvertisementMaterialSerializer(material, context={'request': request}).data
+                material_data['schedule_priority'] = priority_map.get(material.id, 0)
+                materials_data.append(material_data)
+                
+            # Sortuj według priorytetu (wyższy najpierw)
+            materials_data.sort(key=lambda x: x['schedule_priority'], reverse=True)
+            data['materials'] = materials_data
+        
+        return Response(data)
     
     except Stand.DoesNotExist:
         return Response({"error": "Stoisko nie istnieje"}, 

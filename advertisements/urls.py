@@ -39,4 +39,11 @@ urlpatterns = [
 
     path('stands/<int:pk>/animation/', views.StandAnimationUpdateView.as_view(), name='stand-animation-update'),
 
+    # Kalendarz emisji
+    path('stand/<int:stand_id>/schedule/', views.ScheduleCalendarView.as_view(), name='schedule-calendar'),
+    path('material/<int:material_id>/schedule/create/', views.ScheduleCreateView.as_view(), name='schedule-create'),
+    path('schedule/<int:pk>/update/', views.ScheduleUpdateView.as_view(), name='schedule-update'),
+    path('schedule/<int:pk>/delete/', views.ScheduleDeleteView.as_view(), name='schedule-delete'),
+    path('api/stand/<int:stand_id>/schedule/events/', views.get_schedule_events, name='api-schedule-events'),
+
 ]
