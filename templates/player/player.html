@@ -16,13 +16,13 @@
             background-color: #000;
             font-family: "Varela Round", sans-serif;
         }
-        
+
         .carousel-container {
             height: 100vh;
             width: 100vw;
             position: relative;
         }
-        
+
         .carousel-slide {
             position: absolute;
             top: 0;
@@ -33,77 +33,69 @@
             justify-content: center;
             align-items: center;
             opacity: 0;
-            transform: scale(1);
-            transition-property: opacity, transform;
-            transition-duration: 1s;
-            transition-timing-function: ease-in-out;
+            z-index: 0;
+            pointer-events: none;
+            transition: opacity 1s ease-in-out, transform 1s ease-in-out;
         }
-        
-        /* Podstawowa aktywna animacja */
+
         .carousel-slide.active {
             opacity: 1;
+            z-index: 2;
+            pointer-events: auto;
+        }
+
+        .carousel-slide.previous {
             z-index: 1;
         }
-        
-        /* Animacje przejść */
-        /* Fade */
-        .fade-transition .carousel-slide.active {
-            opacity: 1;
+
+        /* FADE */
+        .fade-transition .carousel-slide {
+            transform: none;
         }
-        
-        /* Slide */
+
+        /* SLIDE */
         .slide-transition .carousel-slide {
             transform: translateX(100%);
-            opacity: 1;
-        }
-        .slide-transition .carousel-slide.active {
-            transform: translateX(0);
         }
         .slide-transition .carousel-slide.previous {
             transform: translateX(-100%);
         }
-        
-        /* Zoom */
+        .slide-transition .carousel-slide.active {
+            transform: translateX(0);
+        }
+
+        /* ZOOM */
         .zoom-transition .carousel-slide {
             transform: scale(0.8);
         }
         .zoom-transition .carousel-slide.active {
-            opacity: 1;
             transform: scale(1);
         }
-        
-        /* Flip */
+
+        /* FLIP */
         .flip-transition .carousel-slide {
             transform: rotateY(90deg);
         }
         .flip-transition .carousel-slide.active {
-            opacity: 1;
             transform: rotateY(0);
         }
-        
-        /* Rotate */
+
+        /* ROTATE */
         .rotate-transition .carousel-slide {
             transform: rotate(180deg) scale(0.8);
         }
         .rotate-transition .carousel-slide.active {
-            opacity: 1;
             transform: rotate(0) scale(1);
         }
-        
+
         /* Media elements */
-        .carousel-slide img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        
+        .carousel-slide img,
         .carousel-slide video {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
-        
-        /* Loading & Error screens */
+
         .loading-screen {
             position: fixed;
             top: 0;
@@ -118,7 +110,7 @@
             z-index: 9999;
             color: white;
         }
-        
+
         .loading-spinner {
             border: 8px solid #333;
             border-radius: 50%;
@@ -128,12 +120,12 @@
             animation: spin 2s linear infinite;
             margin-bottom: 20px;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         .error-screen {
             position: fixed;
             top: 0;
@@ -150,13 +142,12 @@
             text-align: center;
             padding: 20px;
         }
-        
+
         .error-screen h1 {
             font-size: 2em;
             margin-bottom: 20px;
         }
-        
-        /* Status indicator */
+
         .status-indicator {
             position: fixed;
             bottom: 10px;
@@ -164,14 +155,14 @@
             width: 15px;
             height: 15px;
             border-radius: 50%;
-            background-color: #28a745; /* green when connected */
+            background-color: #28a745;
             z-index: 9000;
             opacity: 0.5;
-            display: none; /* Hidden by default, shown in debug mode */
+            display: none;
         }
-        
+
         .status-indicator.offline {
-            background-color: #dc3545; /* red when offline */
+            background-color: #dc3545;
         }
     </style>
 </head>
@@ -180,46 +171,45 @@
         <div class="loading-spinner"></div>
         <h2>Ładowanie materiałów...</h2>
     </div>
-    
+
     <div class="carousel-container"></div>
-    
     <div class="status-indicator" id="statusIndicator"></div>
-    
+
     <script>
         const TOKEN_KEY = 'player_token';
         const STAND_ID_KEY = 'stand_id';
         const API_URL = '/advertisements/api/stand/';
         const STATUS_API_URL = '/advertisements/api/player/status/';
         const PLAYER_VERSION = '1.1.0';
-        
+
         // Przetwarzanie parametrów URL
         const urlParams = new URLSearchParams(window.location.search);
-        
+
         // Get token and stand ID from URL params or localStorage
         const token = urlParams.get('token') || localStorage.getItem(TOKEN_KEY);
         const standId = urlParams.get('stand') || localStorage.getItem(STAND_ID_KEY);
         console.log(standId)
-        
+
         // Debug mode
         const debugMode = urlParams.get('debug') === '1';
-        
+
         if (token && standId) {
             // Save to localStorage
             localStorage.setItem(TOKEN_KEY, token);
             localStorage.setItem(STAND_ID_KEY, standId);
         }
-        
+
         let materials = [];
         let currentIndex = 0;
         let carouselContainer = document.querySelector('.carousel-container');
         let transitionType = "{{ stand.transition_animation }}";
         let isPlaying = false;
         let isOnline = true;
-        
+
         // Show error screen with message
         function showError(message) {
             document.querySelector('.loading-screen').style.display = 'none';
-            
+
             const errorScreen = document.createElement('div');
             errorScreen.className = 'error-screen';
             errorScreen.innerHTML = `
@@ -229,13 +219,13 @@
                 <p>Strona odświeży się automatycznie za 30 sekund.</p>
             `;
             document.body.appendChild(errorScreen);
-            
+
             // Reload the page after 30 seconds
             setTimeout(() => {
                 window.location.reload();
             }, 30000);
         }
-        
+
         // Show debug information
         function toggleDebugMode() {
             const statusIndicator = document.getElementById('statusIndicator');
@@ -250,25 +240,25 @@
                 statusIndicator.style.display = 'none';
             }
         }
-        
+
         // Report player status (heartbeat)
         async function reportStatus(withErrors = null) {
             if (!token || !standId) return;
-            
+
             try {
                 // Get screen resolution
                 const resolution = `${window.innerWidth}x${window.innerHeight}`;
-                
+
                 // Prepare data
                 const data = {
                     version: PLAYER_VERSION,
                     screen_resolution: resolution
                 };
-                
+
                 if (withErrors) {
                     data.errors = withErrors;
                 }
-                
+
                 // Send heartbeat
                 await fetch(STATUS_API_URL, {
                     method: 'POST',
@@ -278,23 +268,23 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
+
                 isOnline = true;
             } catch (error) {
                 console.error('Error reporting status:', error);
                 isOnline = false;
             }
-            
+
             toggleDebugMode();
         }
-        
+
         // Load materials from API
         async function loadMaterials() {
             if (!token || !standId) {
                 showError('Brak tokenu lub identyfikatora stoiska. Zaloguj się ponownie.');
                 return;
             }
-            
+
             try {
                 const response = await fetch(`${API_URL}${standId}/`, {
                     headers: {
@@ -302,65 +292,65 @@
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 if (!response.ok) {
                     throw new Error('Błąd autoryzacji lub pobierania danych.');
                 }
-                
+
                 const data = await response.json();
-                
-                
+
+
                 if (!data.materials || data.materials.length === 0) {
                     showError('Brak materiałów do wyświetlenia dla tego stoiska.');
                     await reportStatus('Brak materiałów do wyświetlenia.');
                     return;
                 }
-                
+
                 materials = data.materials;
-                
+
                 // Set global transition settings
                 window.displayTime = data.display_time || 5;
                 transitionType = data.transition_animation || 'fade';
-                
+
                 // Apply transition class to container
                 carouselContainer.className = `carousel-container ${transitionType}-transition`;
-                
+
                 // Start the carousel
                 document.querySelector('.loading-screen').style.display = 'none';
                 initCarousel();
-                
+
                 // Report initial status
                 await reportStatus();
-                
+
                 // Set up periodic status reporting
                 setInterval(reportStatus, 60000); // Every minute
-                
+
             } catch (error) {
                 console.error('Error loading materials:', error);
                 await reportStatus(`Error loading materials: ${error.message}`);
                 showError('Wystąpił błąd podczas pobierania materiałów.');
             }
         }
-        
+
         // Initialize carousel with materials
         function initCarousel() {
             carouselContainer.innerHTML = '';
-            
+
             // Create slides
             materials.forEach((material, index) => {
                 const slide = document.createElement('div');
                 slide.className = 'carousel-slide';
-                
+
                 if (index === 0) {
                     slide.classList.add('active');
                 }
-                
+
                 if (material.material_type === 'image') {
                     const img = document.createElement('img');
                     img.src = material.file_url;
                     img.alt = `Material ${index + 1}`;
                     slide.appendChild(img);
-                    
+
                 } else if (material.material_type === 'video') {
                     const video = document.createElement('video');
                     video.src = material.file_url;
@@ -370,63 +360,57 @@
                     video.dataset.duration = material.duration || window.displayTime;
                     slide.appendChild(video);
                 }
-                
+
                 carouselContainer.appendChild(slide);
             });
-            
+
             // Start the carousel
             isPlaying = true;
             showSlide(0);
         }
-        
+
         // Show slide at specified index
         function showSlide(index) {
             if (!isPlaying) return;
-            
+
             const slides = document.querySelectorAll('.carousel-slide');
-            
+
             if (slides.length === 0) return;
-            
-            // Reset all slides and mark previous
-            slides.forEach(slide => {
+
+            // Remove all states
+            slides.forEach((slide, i) => {
                 slide.classList.remove('active', 'previous');
+                if (i === currentIndex) slide.classList.add('previous');
             });
-            
-            // Mark previous slide
-            if (index > 0) {
-                slides[index - 1].classList.add('previous');
-            } else {
-                slides[slides.length - 1].classList.add('previous');
-            }
-            
+
             // Show current slide
             slides[index].classList.add('active');
-            
+
             // If it's a video, play it and wait for it to end
             const currentSlide = slides[index];
             const video = currentSlide.querySelector('video');
-            
+
             if (video) {
                 video.currentTime = 0;
                 video.play();
-                
+
                 // Move to next slide when video ends
                 video.onended = function() {
                     nextSlide();
                 };
-                
+
                 // Fallback in case video doesn't trigger onended
                 setTimeout(() => {
                     if (!video.paused && isPlaying) {
                         nextSlide();
                     }
                 }, (parseInt(video.dataset.duration) || window.displayTime) * 1000);
-                
+
             } else {
                 // For images, move to next slide after the specified duration
                 const material = materials[index];
                 const duration = material.duration || window.displayTime;
-                
+
                 setTimeout(() => {
                     if (isPlaying) {
                         nextSlide();
@@ -434,7 +418,7 @@
                 }, duration * 1000);
             }
         }
-        
+
         // Move to next slide
         function nextSlide() {
             currentIndex++;
@@ -443,14 +427,14 @@
             }
             showSlide(currentIndex);
         }
-        
+
         // Handle keyboard shortcuts
         document.addEventListener('keydown', function(event) {
             // ESC key - exit fullscreen
             if (event.key === 'Escape' && document.fullscreenElement) {
                 document.exitFullscreen();
             }
-            
+
             // F key - enter fullscreen
             if (event.key === 'f' || event.key === 'F') {
                 if (!document.fullscreenElement) {
@@ -459,7 +443,7 @@
                     document.exitFullscreen();
                 }
             }
-            
+
             // Spacebar - pause/resume
             if (event.key === ' ') {
                 isPlaying = !isPlaying;
@@ -467,18 +451,18 @@
                     showSlide(currentIndex);
                 }
             }
-            
+
             // Arrow left - previous slide
             if (event.key === 'ArrowLeft') {
                 currentIndex = (currentIndex - 1 + materials.length) % materials.length;
                 showSlide(currentIndex);
             }
-            
+
             // Arrow right - next slide
             if (event.key === 'ArrowRight') {
                 nextSlide();
             }
-            
+
             // D key - toggle debug mode
             if (event.key === 'd' || event.key === 'D') {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -490,17 +474,17 @@
                 window.location.search = urlParams.toString();
             }
         });
-        
+
         // Start periodically checking for new content
         let refreshInterval;
-        
+
         function startRefreshTimer() {
             // Check for new content every 5 minutes
             refreshInterval = setInterval(() => {
                 loadMaterials();
             }, 5 * 60 * 1000);
         }
-        
+
         // Handle visibility changes (tab switching)
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
@@ -512,19 +496,19 @@
                 isPlaying = true;
                 loadMaterials(); // Reload content
                 startRefreshTimer();
-                
+
                 // Resume from current slide
                 showSlide(currentIndex);
             }
         });
-        
+
         // Load materials when the page loads
         window.addEventListener('load', () => {
             loadMaterials();
             startRefreshTimer();
             toggleDebugMode();
         });
-        
+
         // Reload page every hour to refresh content and prevent memory leaks
         setTimeout(() => {
             window.location.reload();
@@ -532,3 +516,5 @@
     </script>
 </body>
 </html>
+
+
