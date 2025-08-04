@@ -195,10 +195,16 @@
                         <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Kalendarz emisji</h5>
                     </div>
                     <div class="card-body text-center">
-                        <div class="alert alert-info mb-0">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Funkcja kalendarza emisji materiałów jest w przygotowaniu. Będzie dostępna wkrótce.
-                        </div>
+                        {% if stand %}
+                            <a href="{% url 'schedule-calendar' stand_id=stand.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-calendar-alt me-2"></i>Przejdź do kalendarza emisji
+                            </a>
+                        {% else %}
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Aby korzystać z kalendarza emisji, musisz mieć przypisane stoisko.
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

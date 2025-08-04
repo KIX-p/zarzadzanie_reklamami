@@ -1,5 +1,5 @@
 from django import forms
-from .models import Store, Department, Stand, AdvertisementMaterial
+from .models import Store, Department, Stand, AdvertisementMaterial, EmissionSchedule
 import datetime
 
 class AdvertisementMaterialForm(forms.ModelForm):
@@ -35,7 +35,7 @@ class AdvertisementMaterialForm(forms.ModelForm):
             self.fields['never_expires'].initial = False
             
         # Ustaw minimalną datę na jutro
-        tomorrow = datetime.datetime.now()
+        tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
         self.fields['expires_at'].widget.attrs['min'] = tomorrow.strftime('%Y-%m-%dT%H:%M')
         
     def clean(self):
@@ -71,3 +71,57 @@ class StandAnimationForm(forms.ModelForm):
             # Edytor może edytować tylko swoje stanowisko
             if self.instance != user.managed_stand:
                 self.fields['transition_animation'].disabled = True
+
+
+class EmissionScheduleForm(forms.ModelForm):
+    repeat_days_display = forms.MultipleChoiceField(
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        choices=EmissionSchedule.DAY_CHOICES,
+        label="Dni tygodnia"
+    )
+    
+    class Meta:
+        model = EmissionSchedule
+        fields = ['name', 'start_date', 'end_date', 'start_time', 'end_time', 
+                 'repeat_type', 'priority', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'repeat_type': forms.Select(attrs={'class': 'form-select'}),
+            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '10'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Ustaw początkowe wartości dla dni tygodnia (jeśli jest to edycja)
+        if self.instance.pk and self.instance.repeat_days:
+            self.fields['repeat_days_display'].initial = self.instance.repeat_days
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        repeat_type = cleaned_data.get('repeat_type')
+        repeat_days = cleaned_data.get('repeat_days_display')
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        
+        if repeat_type == 'weekly' and not repeat_days:
+            self.add_error('repeat_days_display', 'Wybierz co najmniej jeden dzień tygodnia')
+            
+        # if start_date and end_date and start_date > end_date:
+        #     self.add_error('end_date', 'Data zakończenia musi być późniejsza niż data rozpoczęcia')
+            
+        # if start_time and end_time and start_time > end_time:
+        #     self.add_error('end_time', 'Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia')
+        
+        # Konwersja MultipleChoiceField na JSONField
+        if repeat_days:
+            cleaned_data['repeat_days'] = [int(day) for day in repeat_days]
+        
+        return cleaned_data
