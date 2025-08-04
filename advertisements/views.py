@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from rest_framework.authtoken.models import Token
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Store, Department, Stand, AdvertisementMaterial
 from accounts.permissions import SuperadminRequiredMixin, StoreAdminRequiredMixin, EditorRequiredMixin, StoreAccessMixin
@@ -18,10 +19,7 @@ class PlayerView(TemplateView):
     template_name = 'player/player.html'
 
 # Nowe widoki zarządzania materiałami
-class StandMaterialsView(EditorRequiredMixin, StoreAccessMixin, DetailView):
-    """
-    View for managing stand materials with drag & drop interface
-    """
+class StandMaterialsView(LoginRequiredMixin, DetailView):
     model = Stand
     template_name = 'advertisements/stand_materials.html'
     context_object_name = 'stand'

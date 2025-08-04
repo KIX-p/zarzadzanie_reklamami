@@ -1,5 +1,13 @@
 from django.db import models
 from django.core.validators import FileExtensionValidator
+from cloudinary.models import CloudinaryField
+import cloudinary
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+import logging
+import traceback
+logger = logging.getLogger(__name__)
 
 class Store(models.Model):
     name = models.CharField(max_length=255, verbose_name="Nazwa sklepu")
@@ -68,9 +76,16 @@ class AdvertisementMaterial(models.Model):
     
     stand = models.ForeignKey(Stand, on_delete=models.CASCADE, related_name="materials", verbose_name="Stoisko")
     material_type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name="Typ materiału")
-    file = models.FileField(upload_to=advertisement_file_path, 
-                          validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif', 'mp4', 'avi', 'mov'])],
-                          verbose_name="Plik")
+    file = CloudinaryField(
+        'file',
+        resource_type='auto',
+        folder='advertisements/',
+        transformation=[
+            {'fetch_format': 'auto', 'quality': 'auto'}
+        ],
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm'])],
+        help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm.",
+    )
     order = models.PositiveIntegerField(default=0, verbose_name="Kolejność")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active', verbose_name="Status")
     duration = models.IntegerField(default=5, verbose_name="Czas wyświetlania (sekundy)")
@@ -82,6 +97,41 @@ class AdvertisementMaterial(models.Model):
         verbose_name_plural = "Materiały reklamowe"
         ordering = ['order']
         
+    def delete(self, *args, **kwargs):
+        logger.debug(f"Wywołano delete() dla AdvertisementMaterial id={self.id}")
+        file_id = None
+        if self.file:
+            file_id = self.file.public_id
+            logger.debug(f"Znaleziono file_id: {file_id}")
+        else:
+            logger.debug("Brak pliku do usunięcia (self.file jest None lub puste)")
+
+        super().delete(*args, **kwargs)
+        logger.debug("Obiekt AdvertisementMaterial usunięty z bazy")
+
+        if file_id:
+            try:
+                # Ustal właściwy resource_type
+                if self.material_type == 'image':
+                    resource_type = 'image'
+                elif self.material_type == 'video':
+                    resource_type = 'video'
+                else:
+                    resource_type = 'raw'
+
+                logger.debug(f"Próba usunięcia pliku z Cloudinary: {file_id}, resource_type: {resource_type}")
+                result = cloudinary.uploader.destroy(
+                    file_id,
+                    resource_type=resource_type,
+                    invalidate=True
+                )
+                logger.info(f"Usunięto plik Cloudinary (przez metodę delete): {file_id}, rezultat: {result}")
+            except Exception as e:
+                logger.error(f"Błąd podczas usuwania pliku Cloudinary (przez metodę delete) ID={file_id}: {str(e)}")
+                logger.error(traceback.format_exc())
+        else:
+            logger.debug("Nie znaleziono file_id, nie usuwam z Cloudinary")
+
     def __str__(self):
         return f"Materiał {self.id} ({self.get_material_type_display()}) - {self.stand.name}"
     
