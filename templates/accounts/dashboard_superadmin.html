@@ -48,7 +48,7 @@
     <!-- Dashboard overview -->
     <div class="row mb-4">
 
-        <div class="col-md-3">
+        <div class="col-md-6">
             <div class="card bg-success text-white">
                 <div class="card-body">
                     <h5 class="card-title">Aktywne odtwarzacze</h5>
@@ -56,33 +56,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6">
             <div class="card bg-info text-white">
                 <div class="card-body">
                     <h5 class="card-title">Całkowita liczba stoisk</h5>
                     <h2>{{ stands_count }}</h2>
-                </div>
-            </div>
-        </div>
-
-                <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Sklepy</h5>
-                    {% for store in stores %}
-                    <h2>{{ store.name }}</h2>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <h5 class="card-title">Lokacja</h5>
-                    {% for store in stores %}
-                    <h2>{{ store.location }}</h2>
-                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -98,6 +76,8 @@
         <div class="card-body">
             <div class="row" id="playersMonitor">
                 {% for store in stores %}
+                    <h3>{{ store.name }}</h3>
+                    <br>
                     <div class="col-12 store-section">
                         <div class="row">
                             {% for department in store.departments.all %}
@@ -161,6 +141,8 @@
         </div>
     </div>
 </div>
+
+<br><br>
 {% endblock %}
 
 {% block extra_js %}
