@@ -42,6 +42,7 @@ urlpatterns = [
     # Kalendarz emisji
     path('stand/<int:stand_id>/schedule/', views.ScheduleCalendarView.as_view(), name='schedule-calendar'),
     path('stand/<int:stand_id>/schedule/create/', views.ScheduleCreateView.as_view(), name='schedule-create'),
+    path('api/schedule/<int:schedule_id>/', api_views.schedule_details, name='api-schedule-details'),
     path('schedule/<int:pk>/update/', views.ScheduleUpdateView.as_view(), name='schedule-update'),
     path('schedule/<int:pk>/delete/', views.ScheduleDeleteView.as_view(), name='schedule-delete'),
     path('api/stand/<int:stand_id>/schedule/events/', views.get_schedule_events, name='api-schedule-events'),

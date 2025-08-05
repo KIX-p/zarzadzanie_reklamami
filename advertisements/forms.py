@@ -77,6 +77,12 @@ class EmissionScheduleForm(forms.ModelForm):
         choices=EmissionSchedule.DAY_CHOICES,
         label="Dni tygodnia"
     )
+    
+    is_overnight = forms.BooleanField(
+        required=False, 
+        label="Emisja przez północ",
+        help_text="Zaznacz, jeśli harmonogram trwa przez północ (np. od 22:00 do 06:00)"
+    )
 
     class Meta:
         model = EmissionSchedule
@@ -94,9 +100,14 @@ class EmissionScheduleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        
+        # Ustaw początkowe wartości dla dni tygodnia (jeśli jest to edycja)
         if self.instance.pk and self.instance.repeat_days:
             self.fields['repeat_days_display'].initial = [str(day) for day in self.instance.repeat_days]
+        
+        # Ustaw wartość dla is_overnight
+        if self.instance.pk and self.instance.start_time and self.instance.end_time:
+            self.fields['is_overnight'].initial = self.instance.start_time > self.instance.end_time
 
     def clean(self):
         cleaned_data = super().clean()
@@ -106,10 +117,14 @@ class EmissionScheduleForm(forms.ModelForm):
         end_date = cleaned_data.get('end_date')
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
-
+        is_overnight = cleaned_data.get('is_overnight')
+        
         if repeat_type == 'weekly' and not repeat_days:
             self.add_error('repeat_days_display', 'Wybierz co najmniej jeden dzień tygodnia')
 
+        if not is_overnight and start_time and end_time and start_time >= end_time:
+            self.add_error('end_time', 'Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia')
+            
         if repeat_days:
             cleaned_data['repeat_days'] = [int(day) for day in repeat_days]
         else:

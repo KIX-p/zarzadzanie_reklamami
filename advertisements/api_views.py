@@ -71,6 +71,27 @@ def stand_materials(request, stand_id):
             start_time__lte=current_time,
             end_time__gte=current_time
         ).order_by('-priority')
+
+        # Pobierz aktywne harmonogramy dla stoiska - dodajemy specjalną obsługę harmonogramów nocnych
+        current_schedules = EmissionSchedule.objects.filter(
+            materials__stand=stand, 
+            is_active=True
+        )
+        
+        # Filtruj harmonogramy według daty i czasu
+        active_schedules = []
+        for schedule in current_schedules:
+            # Sprawdź czy harmonogram obowiązuje w bieżącym dniu
+            if schedule.is_scheduled_for_date(current_date):
+                # Sprawdź godziny
+                if schedule.start_time <= schedule.end_time:
+                    # Normalny harmonogram dzienny (np. 8:00-20:00)
+                    if schedule.start_time <= current_time <= schedule.end_time:
+                        active_schedules.append(schedule)
+                else:
+                    # Harmonogram nocny przechodzący przez północ (np. 22:00-6:00)
+                    if schedule.start_time <= current_time or current_time <= schedule.end_time:
+                        active_schedules.append(schedule)
         
         # Filtruj harmonogramy według daty i typu powtarzania
         active_schedules = []
@@ -80,9 +101,30 @@ def stand_materials(request, stand_id):
         
         # Jeśli są aktywne harmonogramy, używaj tylko materiałów z harmonogramów
         materials_ids = []
+        # Jeśli są aktywne harmonogramy, używaj tylko materiałów z harmonogramów
         if active_schedules:
-            materials_ids = [s.material_id for s in active_schedules]
-            materials = materials.filter(id__in=materials_ids)
+            # Grupuj materiały według priorytetów harmonogramów
+            materials_by_priority = {}
+            
+            for schedule in active_schedules:
+                priority = schedule.priority
+                for material in schedule.materials.filter(status='active'):
+                    # Zachowaj tylko najwyższy priorytet dla każdego materiału
+                    if material.id not in materials_by_priority or priority > materials_by_priority[material.id]['priority']:
+                        materials_by_priority[material.id] = {
+                            'material': material,
+                            'priority': priority
+                        }
+            
+            # Konwertuj na listę i sortuj według priorytetu
+            prioritized_materials = [item['material'] for item in sorted(
+                materials_by_priority.values(), 
+                key=lambda x: x['priority'], 
+                reverse=True
+            )]
+            
+            # Użyj tylko materiałów z aktywnych harmonogramów
+            materials = prioritized_materials
         
         # Serializuj stoisko wraz z materiałami
         serializer = StandSerializer(stand, context={'request': request})
@@ -107,6 +149,66 @@ def stand_materials(request, stand_id):
     
     except Stand.DoesNotExist:
         return Response({"error": "Stoisko nie istnieje"}, 
+                      status=status.HTTP_404_NOT_FOUND)
+    
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def schedule_details(request, schedule_id):
+    """
+    Pobiera szczegóły harmonogramu
+    """
+    try:
+        schedule = EmissionSchedule.objects.get(pk=schedule_id)
+        
+        # Sprawdź uprawnienia (ten sam kod co w innych widokach)
+        materials = schedule.materials.all()
+        if not materials.exists():
+            return Response({"error": "Harmonogram nie zawiera materiałów"}, 
+                          status=status.HTTP_404_NOT_FOUND)
+            
+        stand = materials.first().stand
+        user = request.user
+        
+        if not (user.is_superadmin() or 
+               (user.is_store_admin() and stand.department.store == user.managed_store) or
+               (user.is_editor() and stand == user.managed_stand)):
+            return Response({"error": "Brak uprawnień"}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
+        # Przygotuj dane
+        material_data = []
+        for material in materials:
+            material_data.append({
+                'id': material.id,
+                'type': material.get_material_type_display(),
+                'url': request.build_absolute_uri(material.file.url) if material.file else None,
+                'duration': material.duration,
+                'status': material.status
+            })
+        
+        # Czy to harmonogram nocny
+        is_overnight = schedule.start_time > schedule.end_time
+        
+        data = {
+            'id': schedule.id,
+            'name': schedule.name,
+            'start_date': schedule.start_date.isoformat(),
+            'end_date': schedule.end_date.isoformat() if schedule.end_date else None,
+            'start_time': schedule.start_time.isoformat(),
+            'end_time': schedule.end_time.isoformat(),
+            'repeat_type': schedule.repeat_type,
+            'repeat_days': schedule.repeat_days,
+            'priority': schedule.priority,
+            'is_active': schedule.is_active,
+            'is_overnight': is_overnight,
+            'materials': material_data
+        }
+        
+        return Response(data)
+        
+    except EmissionSchedule.DoesNotExist:
+        return Response({"error": "Harmonogram nie istnieje"}, 
                       status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['POST'])

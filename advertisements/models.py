@@ -219,44 +219,71 @@ class EmissionSchedule(models.Model):
         return f"{self.name} ({self.start_date} - {self.end_date or 'brak końca'})"
 
     def is_scheduled_for_date(self, check_date):
-        """Czy harmonogram jest aktywny danego dnia"""
+        """Sprawdza czy harmonogram jest aktywny w podanym dniu"""
+        # Sprawdź czy data jest w zakresie
         if check_date < self.start_date:
             return False
         if self.end_date and check_date > self.end_date:
             return False
-
+            
+        # Sprawdź typ powtarzania
         if self.repeat_type == 'none':
+            # Dla jednorazowego wydarzenia - tylko w dniu rozpoczęcia
             return check_date == self.start_date
         elif self.repeat_type == 'daily':
+            # Codziennie
             return True
         elif self.repeat_type == 'weekly':
+            # Sprawdź czy dzień tygodnia jest w repeat_days
             weekday = check_date.weekday()
             return self.repeat_days and weekday in self.repeat_days
         elif self.repeat_type == 'monthly':
-            return check_date.day == self.start_date.day
+            # Ten sam dzień każdego miesiąca
+            try:
+                # Obsługa ostatniego dnia miesiąca
+                if self.start_date.day >= 28:  # Potencjalnie ostatni dzień miesiąca
+                    # Jeśli dzień rozpoczęcia to ostatni dzień miesiąca, sprawdź czy dziś też jest ostatni
+                    import calendar
+                    last_day = calendar.monthrange(check_date.year, check_date.month)[1]
+                    if self.start_date.day == calendar.monthrange(self.start_date.year, 
+                                                                self.start_date.month)[1]:
+                        return check_date.day == last_day
+                
+                # Standardowe sprawdzenie - ten sam dzień miesiąca
+                return check_date.day == self.start_date.day
+            except:
+                return False
         elif self.repeat_type == 'custom':
-            return False  # Możliwość rozszerzenia
+            # Implementacja dla niestandardowych powtórzeń (można rozszerzyć)
+            return False
+            
         return False
 
     def apply_schedule(self):
-        """Aktywuje lub dezaktywuje przypisane materiały w zależności od aktualnego czasu"""
+        """Sprawdza czy harmonogram jest aktywny w bieżącym momencie"""
         from django.utils import timezone
-
-        # Użycie localtime do uzyskania czasu w Twojej strefie czasowej
+        
+        # Użycie localtime do uzyskania czasu w strefie czasowej aplikacji
         now = timezone.localtime(timezone.now())
         today = now.date()
         current_time = now.time()
-
-        print(self.start_time)
-        print(current_time)
-
+        
         if not self.is_active:
-            return
-
-        if self.is_scheduled_for_date(today):
-            if self.start_time <= current_time <= self.end_time:
-                self.materials.update(status='active')
-            else:
-                self.materials.update(status='inactive')
+            # Jeśli harmonogram jest nieaktywny, zwróć False
+            return False
+        
+        # Sprawdź, czy dzień jest zgodny z harmonogramem
+        is_active_day = self.is_scheduled_for_date(today)
+        if not is_active_day:
+            return False
+        
+        # Sprawdź czas
+        # Obsługa harmonogramów nocnych (przez północ)
+        if self.start_time <= self.end_time:
+            # Normalny zakres godzin (np. 8:00-20:00)
+            is_active_time = self.start_time <= current_time <= self.end_time
         else:
-            self.materials.update(status='inactive')
+            # Zakres przez północ (np. 22:00-6:00)
+            is_active_time = self.start_time <= current_time or current_time <= self.end_time
+        
+        return is_active_time

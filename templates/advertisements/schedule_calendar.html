@@ -259,7 +259,20 @@
             return repeatTypes[repeatType] || repeatType;
         }
 
-        // Funkcja do wyświetlania szczegółów harmonogramu
+        function formatEventTime(event) {
+            const startTime = event.start ? event.start.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
+            const endTime = event.end ? event.end.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
+            
+            // Sprawdź czy to harmonogram nocny
+            const isOvernight = event.extendedProps.isOvernight;
+            
+            if (isOvernight) {
+                return `${startTime} - ${endTime} (przez północ)`;
+            } else {
+                return `${startTime} - ${endTime}`;
+            }
+        }
+
         function showScheduleDetails(scheduleId) {
             const modalBody = document.getElementById('scheduleDetailsContent');
             const editLink = document.getElementById('editScheduleLink');
@@ -272,45 +285,54 @@
             // Pokaż modal z placeholderem
             modalBody.innerHTML = `<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Ładowanie...</span></div></div>`;
 
-            // W rzeczywistym przypadku wykonaj zapytanie AJAX do pobrania szczegółów
-            // fetch(`/advertisements/api/schedule/${scheduleId}/`)
-            //     .then(response => response.json())
-            //     .then(data => { ... });
-
-            // Placeholder dla demonstracji
-            setTimeout(() => {
-                const event = calendar.getEventById(scheduleId);
-                if (event) {
-                    const repeatType = getRepeatTypeDisplay(event.extendedProps.repeat_type);
-                    const priority = event.extendedProps.priority;
-
-                    const startTime = event.start ? event.start.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
-                    const endTime = event.end ? event.end.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
-                    const startDate = event.start ? event.start.toLocaleDateString('pl-PL') : '-';
-
-                    // Przykład, jak uzyskać i wyświetlić listę materiałów
-                    const materials = event.extendedProps.materials || [];
+            // Wykonaj zapytanie AJAX do pobrania szczegółów
+            fetch(`/advertisements/api/schedule/${scheduleId}/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const repeatType = getRepeatTypeDisplay(data.repeat_type);
+                    const priority = data.priority;
+                    
+                    // Generuj HTML dla materiałów
                     let materialsListHtml = '<ul class="list-unstyled">';
-                    materials.forEach(mat => {
-                         materialsListHtml += `<li>${mat.type} (ID: ${mat.id})</li>`;
+                    data.materials.forEach(mat => {
+                        materialsListHtml += `<li>${mat.type} (ID: ${mat.id})</li>`;
                     });
                     materialsListHtml += '</ul>';
-
+                    
+                    const startDate = new Date(data.start_date).toLocaleDateString('pl-PL');
+                    const endDate = data.end_date ? new Date(data.end_date).toLocaleDateString('pl-PL') : 'Bezterminowo';
+                    
+                    // Format czasów z uwzględnieniem harmonogramu nocnego
+                    let timeDisplay = '';
+                    if (data.is_overnight) {
+                        timeDisplay = `${data.start_time.substring(0,5)} - ${data.end_time.substring(0,5)} (przez północ)`;
+                    } else {
+                        timeDisplay = `${data.start_time.substring(0,5)} - ${data.end_time.substring(0,5)}`;
+                    }
+                    
                     modalBody.innerHTML = `
                         <div>
-                            <h5>${event.title}</h5>
+                            <h5>${data.name}</h5>
                             <hr>
                             <p><strong>Materiał(y):</strong></p>
                             ${materialsListHtml}
-                            <p><strong>Data i godzina:</strong> ${startDate} ${startTime} - ${endTime}</p>
+                            <p><strong>Okres emisji:</strong> ${startDate} do ${endDate}</p>
+                            <p><strong>Godziny emisji:</strong> ${timeDisplay}</p>
                             <p><strong>Typ powtarzania:</strong> ${repeatType}</p>
                             <p><strong>Priorytet:</strong> ${priority}/10</p>
+                            <p><strong>Status:</strong> ${data.is_active ? '<span class="badge bg-success">Aktywny</span>' : '<span class="badge bg-secondary">Nieaktywny</span>'}</p>
                         </div>
                     `;
-                } else {
-                    modalBody.innerHTML = `<div class="alert alert-danger">Nie znaleziono harmonogramu o ID: ${scheduleId}</div>`;
-                }
-            }, 500);
+                })
+                .catch(error => {
+                    console.error('Error fetching schedule details:', error);
+                    modalBody.innerHTML = `<div class="alert alert-danger">Błąd podczas pobierania danych: ${error.message}</div>`;
+                });
             
             const modal = new bootstrap.Modal(document.getElementById('scheduleDetailsModal'));
             modal.show();

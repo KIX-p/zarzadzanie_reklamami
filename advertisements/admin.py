@@ -28,3 +28,4 @@ class EmissionScheduleAdmin(admin.ModelAdmin):
 @admin.register(PlayerStatus)
 class PlayerStatusAdmin(admin.ModelAdmin):
     list_display = ('stand', 'is_online', 'last_seen', 'ip_address')
+

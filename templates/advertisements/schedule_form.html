@@ -82,6 +82,19 @@
                             </div>
                         </div>
 
+                        <div class="mb-3 form-check">
+                            {{ form.is_overnight }}
+                            <label class="form-check-label" for="{{ form.is_overnight.id_for_label }}">
+                                {{ form.is_overnight.label }}
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                {{ form.is_overnight.help_text }}
+                            </small>
+                            {% if form.is_overnight.errors %}
+                                <div class="text-danger">{{ form.is_overnight.errors }}</div>
+                            {% endif %}
+                        </div>
+
                         <div class="mb-3">
                             <label for="{{ form.repeat_type.id_for_label }}" class="form-label">Typ powtarzania</label>
                             {{ form.repeat_type }}
