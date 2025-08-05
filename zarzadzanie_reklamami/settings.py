@@ -197,6 +197,8 @@ LOGGING = {
     },
 }
 
+
+# NA PRODUKCJI USUNAC I UZYC CRON!!!!!
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
     import subprocess
