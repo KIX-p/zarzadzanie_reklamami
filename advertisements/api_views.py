@@ -55,19 +55,18 @@ def stand_materials(request, stand_id):
         if not IsPlayerOrAdmin().has_object_permission(request, None, stand):
             return Response({"error": "Nie masz uprawnień do tego stoiska"}, 
                           status=status.HTTP_403_FORBIDDEN)
-        
-        # Aktualna data i czas
+
         now = timezone.now()
         current_time = now.time()
         current_date = now.date()
         current_weekday = now.weekday()
-        
+
         # Pobierz wszystkie materiały dla stoiska
         materials = AdvertisementMaterial.objects.filter(stand=stand, status='active')
-        
+
         # Pobierz aktywne harmonogramy dla stoiska
         schedules = EmissionSchedule.objects.filter(
-            material__stand=stand, 
+            materials__stand=stand,  # Corrected from 'material__stand'
             is_active=True,
             start_time__lte=current_time,
             end_time__gte=current_time

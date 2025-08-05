@@ -182,7 +182,7 @@ class EmissionSchedule(models.Model):
         ('monthly', 'Co miesiąc'),
         ('custom', 'Niestandardowy'),
     )
-    
+
     DAY_CHOICES = (
         (0, 'Poniedziałek'),
         (1, 'Wtorek'),
@@ -193,57 +193,70 @@ class EmissionSchedule(models.Model):
         (6, 'Niedziela'),
     )
 
-    material = models.ForeignKey(AdvertisementMaterial, on_delete=models.CASCADE, 
-                                related_name='schedules', verbose_name="Materiał")
+    materials = models.ManyToManyField(
+        AdvertisementMaterial,
+        related_name='schedules',
+        verbose_name="Materiały"
+    )
     name = models.CharField(max_length=100, verbose_name="Nazwa harmonogramu")
     start_date = models.DateField(verbose_name="Data rozpoczęcia")
     end_date = models.DateField(null=True, blank=True, verbose_name="Data zakończenia")
     start_time = models.TimeField(verbose_name="Czas rozpoczęcia")
     end_time = models.TimeField(verbose_name="Czas zakończenia")
-    repeat_type = models.CharField(max_length=10, choices=REPEAT_CHOICES, 
-                                  default='none', verbose_name="Typ powtarzania")
-    repeat_days = models.JSONField(null=True, blank=True, 
-                                  verbose_name="Dni powtarzania", 
-                                  help_text="Tablica dni tygodnia (0-6), gdy repeat_type=weekly")
-    priority = models.IntegerField(default=5, verbose_name="Priorytet", 
-                                  help_text="Wyższy priorytet (10) wypiera niższy (1)")
+    repeat_type = models.CharField(max_length=10, choices=REPEAT_CHOICES, default='none', verbose_name="Typ powtarzania")
+    repeat_days = models.JSONField(null=True, blank=True, verbose_name="Dni powtarzania")
+    priority = models.IntegerField(default=5, verbose_name="Priorytet")
     is_active = models.BooleanField(default=True, verbose_name="Aktywny")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = "Harmonogram emisji"
         verbose_name_plural = "Harmonogramy emisji"
         ordering = ['-priority', 'start_date', 'start_time']
 
     def __str__(self):
-        return f"{self.name} ({self.material.stand.name})"
-    
+        return f"{self.name} ({self.start_date} - {self.end_date or 'brak końca'})"
+
     def is_scheduled_for_date(self, check_date):
-        """Sprawdza czy harmonogram jest aktywny w podanym dniu"""
-        # Sprawdź czy data jest w zakresie
+        """Czy harmonogram jest aktywny danego dnia"""
         if check_date < self.start_date:
             return False
         if self.end_date and check_date > self.end_date:
             return False
-            
-        # Sprawdź typ powtarzania
+
         if self.repeat_type == 'none':
-            # Dla jednorazowego wydarzenia - tylko w dniu rozpoczęcia
             return check_date == self.start_date
         elif self.repeat_type == 'daily':
-            # Codziennie
             return True
         elif self.repeat_type == 'weekly':
-            # Sprawdź czy dzień tygodnia jest w repeat_days
             weekday = check_date.weekday()
             return self.repeat_days and weekday in self.repeat_days
         elif self.repeat_type == 'monthly':
-            # Ten sam dzień każdego miesiąca
             return check_date.day == self.start_date.day
         elif self.repeat_type == 'custom':
-            # Obsługa niestandardowych powtórzeń
-            # (możesz rozbudować tę logikę w przyszłości)
-            return False
-            
+            return False  # Możliwość rozszerzenia
         return False
+
+    def apply_schedule(self):
+        """Aktywuje lub dezaktywuje przypisane materiały w zależności od aktualnego czasu"""
+        from django.utils import timezone
+
+        # Użycie localtime do uzyskania czasu w Twojej strefie czasowej
+        now = timezone.localtime(timezone.now())
+        today = now.date()
+        current_time = now.time()
+
+        print(self.start_time)
+        print(current_time)
+
+        if not self.is_active:
+            return
+
+        if self.is_scheduled_for_date(today):
+            if self.start_time <= current_time <= self.end_time:
+                self.materials.update(status='active')
+            else:
+                self.materials.update(status='inactive')
+        else:
+            self.materials.update(status='inactive')

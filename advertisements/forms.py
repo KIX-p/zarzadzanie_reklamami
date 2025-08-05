@@ -2,6 +2,7 @@ from django import forms
 from .models import Store, Department, Stand, AdvertisementMaterial, EmissionSchedule
 import datetime
 
+
 class AdvertisementMaterialForm(forms.ModelForm):
     never_expires = forms.BooleanField(
         label="Bezterminowy",
@@ -9,7 +10,7 @@ class AdvertisementMaterialForm(forms.ModelForm):
         initial=True,
         help_text="Zaznacz, jeśli materiał nie powinien automatycznie wygasać"
     )
-    
+
     class Meta:
         model = AdvertisementMaterial
         fields = ['stand', 'material_type', 'file', 'status', 'duration', 'expires_at']
@@ -20,34 +21,32 @@ class AdvertisementMaterialForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-select'}),
             'duration': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'expires_at': forms.DateTimeInput(
-                attrs={'class': 'form-control', 'type': 'datetime-local'}, 
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
                 format='%Y-%m-%dT%H:%M'
             ),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Ukryj pole expires_at początkowo, jeśli jest nowy materiał lub ma nieokreślony termin
+
         if self.instance.pk is None or self.instance.expires_at is None:
             self.fields['never_expires'].initial = True
         else:
             self.fields['never_expires'].initial = False
-            
-        # Ustaw minimalną datę na jutro
+
         tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
         self.fields['expires_at'].widget.attrs['min'] = tomorrow.strftime('%Y-%m-%dT%H:%M')
-        
+
     def clean(self):
         cleaned_data = super().clean()
         never_expires = cleaned_data.get('never_expires')
         expires_at = cleaned_data.get('expires_at')
-        
+
         if never_expires:
             cleaned_data['expires_at'] = None
         elif not expires_at:
             self.add_error('expires_at', 'Wybierz datę wygaśnięcia lub zaznacz "Bezterminowy"')
-            
+
         return cleaned_data
 
 
@@ -66,9 +65,7 @@ class StandAnimationForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # Możesz dodać ewentualne sprawdzenie dostępu do stoiska
         if user and user.is_editor() and user.managed_stand:
-            # Edytor może edytować tylko swoje stanowisko
             if self.instance != user.managed_stand:
                 self.fields['transition_animation'].disabled = True
 
@@ -80,11 +77,11 @@ class EmissionScheduleForm(forms.ModelForm):
         choices=EmissionSchedule.DAY_CHOICES,
         label="Dni tygodnia"
     )
-    
+
     class Meta:
         model = EmissionSchedule
-        fields = ['name', 'start_date', 'end_date', 'start_time', 'end_time', 
-                 'repeat_type', 'priority', 'is_active']
+        fields = ['name', 'start_date', 'end_date', 'start_time', 'end_time',
+                  'repeat_type', 'priority', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -94,34 +91,28 @@ class EmissionScheduleForm(forms.ModelForm):
             'repeat_type': forms.Select(attrs={'class': 'form-select'}),
             'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '10'}),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Ustaw początkowe wartości dla dni tygodnia (jeśli jest to edycja)
+
         if self.instance.pk and self.instance.repeat_days:
-            self.fields['repeat_days_display'].initial = self.instance.repeat_days
-    
+            self.fields['repeat_days_display'].initial = [str(day) for day in self.instance.repeat_days]
+
     def clean(self):
         cleaned_data = super().clean()
         repeat_type = cleaned_data.get('repeat_type')
-        repeat_days = cleaned_data.get('repeat_days_display')
+        repeat_days = self.cleaned_data.get('repeat_days_display')
         start_date = cleaned_data.get('start_date')
         end_date = cleaned_data.get('end_date')
         start_time = cleaned_data.get('start_time')
         end_time = cleaned_data.get('end_time')
-        
+
         if repeat_type == 'weekly' and not repeat_days:
             self.add_error('repeat_days_display', 'Wybierz co najmniej jeden dzień tygodnia')
-            
-        # if start_date and end_date and start_date > end_date:
-        #     self.add_error('end_date', 'Data zakończenia musi być późniejsza niż data rozpoczęcia')
-            
-        # if start_time and end_time and start_time > end_time:
-        #     self.add_error('end_time', 'Godzina zakończenia musi być późniejsza niż godzina rozpoczęcia')
-        
-        # Konwersja MultipleChoiceField na JSONField
+
         if repeat_days:
             cleaned_data['repeat_days'] = [int(day) for day in repeat_days]
-        
+        else:
+            cleaned_data['repeat_days'] = []
+
         return cleaned_data

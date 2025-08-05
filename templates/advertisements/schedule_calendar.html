@@ -112,32 +112,31 @@
     </div>
 </div>
 
-<!-- Modal wyboru materiału -->
 <div class="modal fade" id="materialSelectModal" tabindex="-1" aria-labelledby="materialSelectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="materialSelectModalLabel">Wybierz materiał</h5>
+                <h5 class="modal-title" id="materialSelectModalLabel">Wybierz materiały do harmonogramu</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="list-group">
+            <form id="materialSelectForm" action="{% url 'schedule-create' stand_id=stand.id %}" method="get">
+                <div class="modal-body">
                     {% for material in materials %}
-                        <a href="{% url 'schedule-create' material_id=material.id %}" class="list-group-item list-group-item-action">
-                            <div class="d-flex align-items-center">
-                                <div class="me-3">
-                                    {% if material.material_type == 'image' %}
-                                        <i class="fas fa-image fa-2x text-primary"></i>
-                                    {% else %}
-                                        <i class="fas fa-film fa-2x text-danger"></i>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">{{ material.get_material_type_display }}</h6>
-                                    <small>Dodano: {{ material.created_at|date:"d.m.Y" }}</small>
-                                </div>
+                        <div class="list-group-item list-group-item-action d-flex align-items-center">
+                            <input type="checkbox" name="material_ids" value="{{ material.id }}" class="form-check-input me-3">
+                            <div class="me-3">
+                                {% if material.material_type == 'image' %}
+                                    <img src="{{ material.file.url }}" class="img-fluid rounded" style="max-width: 100px;" alt="Material image" />
+                                {% else %}
+                                    <i class="fas fa-film fa-2x text-danger"></i>
+                                {% endif %}
                             </div>
-                        </a>
+                            <div>
+                                <h6 class="mb-1">{{ material.get_material_type_display }} (ID: {{ material.id }})</h6>
+                                <small>Dodano: {{ material.created_at|date:"d.m.Y" }}</small>
+                            </div>
+                        </div>
+                        <br>
                     {% empty %}
                         <div class="alert alert-info mb-0">
                             Brak materiałów reklamowych dla tego stoiska.
@@ -145,15 +144,15 @@
                         </div>
                     {% endfor %}
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary" id="createScheduleBtn">Dodaj harmonogram</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Modal ze szczegółami harmonogramu -->
 <div class="modal fade" id="scheduleDetailsModal" tabindex="-1" aria-labelledby="scheduleDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -162,8 +161,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="scheduleDetailsContent">
-                <!-- Zawartość wypełniana przez JavaScript -->
-            </div>
+                </div>
             <div class="modal-footer">
                 <a href="#" id="editScheduleLink" class="btn btn-primary">Edytuj</a>
                 <a href="#" id="deleteScheduleLink" class="btn btn-danger">Usuń</a>
@@ -180,7 +178,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
-        
+
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
             headerToolbar: {
@@ -215,13 +213,13 @@
                 const event = info.event;
                 const priority = event.extendedProps.priority;
                 let priorityClass = 'priority-low';
-                
+
                 if (priority >= 8) {
                     priorityClass = 'priority-high';
                 } else if (priority >= 4) {
                     priorityClass = 'priority-medium';
                 }
-                
+
                 const startTime = event.start ? event.start.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
                 const endTime = event.end ? event.end.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
 
@@ -233,7 +231,7 @@
                         <div><strong>Priorytet:</strong> <span class="priority-indicator ${priorityClass}"></span> ${priority}/10</div>
                     </div>
                 `;
-                
+
                 new bootstrap.Tooltip(info.el, {
                     title: tooltip,
                     placement: 'top',
@@ -245,9 +243,9 @@
                 showScheduleDetails(info.event.id);
             }
         });
-        
+
         calendar.render();
-        
+
         // Funkcja pomocnicza do wyświetlania nazwy typu powtarzania
         function getRepeatTypeDisplay(repeatType) {
             const repeatTypes = {
@@ -257,47 +255,53 @@
                 'monthly': 'Co miesiąc',
                 'custom': 'Niestandardowy'
             };
-            
+
             return repeatTypes[repeatType] || repeatType;
         }
-        
+
         // Funkcja do wyświetlania szczegółów harmonogramu
         function showScheduleDetails(scheduleId) {
-            // W rzeczywistym przypadku dane pobierane byłyby z API
-            // Tutaj użyjmy prostego placeholdera
             const modalBody = document.getElementById('scheduleDetailsContent');
             const editLink = document.getElementById('editScheduleLink');
             const deleteLink = document.getElementById('deleteScheduleLink');
-            
+
             // Aktualizacja linków
             editLink.href = `/advertisements/schedule/${scheduleId}/update/`;
             deleteLink.href = `/advertisements/schedule/${scheduleId}/delete/`;
-            
+
             // Pokaż modal z placeholderem
             modalBody.innerHTML = `<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Ładowanie...</span></div></div>`;
-            
+
             // W rzeczywistym przypadku wykonaj zapytanie AJAX do pobrania szczegółów
             // fetch(`/advertisements/api/schedule/${scheduleId}/`)
             //     .then(response => response.json())
             //     .then(data => { ... });
-            
+
             // Placeholder dla demonstracji
             setTimeout(() => {
                 const event = calendar.getEventById(scheduleId);
                 if (event) {
                     const repeatType = getRepeatTypeDisplay(event.extendedProps.repeat_type);
                     const priority = event.extendedProps.priority;
-                    const materialType = event.extendedProps.material_type === 'image' ? 'Obraz' : 'Film';
-                    
+
                     const startTime = event.start ? event.start.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
                     const endTime = event.end ? event.end.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'}) : '-';
                     const startDate = event.start ? event.start.toLocaleDateString('pl-PL') : '-';
+
+                    // Przykład, jak uzyskać i wyświetlić listę materiałów
+                    const materials = event.extendedProps.materials || [];
+                    let materialsListHtml = '<ul class="list-unstyled">';
+                    materials.forEach(mat => {
+                         materialsListHtml += `<li>${mat.type} (ID: ${mat.id})</li>`;
+                    });
+                    materialsListHtml += '</ul>';
 
                     modalBody.innerHTML = `
                         <div>
                             <h5>${event.title}</h5>
                             <hr>
-                            <p><strong>Typ materiału:</strong> ${materialType}</p>
+                            <p><strong>Materiał(y):</strong></p>
+                            ${materialsListHtml}
                             <p><strong>Data i godzina:</strong> ${startDate} ${startTime} - ${endTime}</p>
                             <p><strong>Typ powtarzania:</strong> ${repeatType}</p>
                             <p><strong>Priorytet:</strong> ${priority}/10</p>

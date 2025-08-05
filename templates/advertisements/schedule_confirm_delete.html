@@ -21,10 +21,17 @@
                         <div class="card-body">
                             <h5>Szczegóły harmonogramu:</h5>
                             <p><strong>Nazwa:</strong> {{ object.name }}</p>
-                            <p><strong>Materiał:</strong> {{ object.material }}</p>
+                            <p><strong>Materiały:</strong></p>
+                            <ul>
+                            {% for material in object.materials.all %}
+                                <li>{{ material.get_material_type_display }} (ID: {{ material.id }})</li>
+                            {% empty %}
+                                <li>Brak przypisanych materiałów.</li>
+                            {% endfor %}
+                            </ul>
                             <p><strong>Data rozpoczęcia:</strong> {{ object.start_date }}</p>
                             <p><strong>Czas emisji:</strong> {{ object.start_time }} - {{ object.end_time }}</p>
-                            <p><strong>Typ powtarzania:</strong> 
+                            <p><strong>Typ powtarzania:</strong>
                                 {% if object.repeat_type == 'none' %}Bez powtarzania
                                 {% elif object.repeat_type == 'daily' %}Codziennie
                                 {% elif object.repeat_type == 'weekly' %}Co tydzień
@@ -33,11 +40,11 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     <form method="post">
                         {% csrf_token %}
                         <div class="d-flex justify-content-between">
-                            <a href="{% url 'schedule-calendar' stand_id=object.material.stand.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'schedule-calendar' stand_id=object.materials.first.stand.id %}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left me-1"></i> Anuluj
                             </a>
                             <button type="submit" class="btn btn-danger">
