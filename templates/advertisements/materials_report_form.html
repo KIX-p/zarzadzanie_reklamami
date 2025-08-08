@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Raport Materiałów Reklamowych{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Zaawansowany Raport Materiałów Reklamowych</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i> Wybierz filtry, aby dostosować zakres raportu. Pozostaw pola puste, aby uwzględnić wszystkie dane.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.store.id_for_label }}" class="form-label">Sklep</label>
+                                {{ form.store }}
+                                {% if form.store.errors %}
+                                    <div class="text-danger">{{ form.store.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.department.id_for_label }}" class="form-label">Dział</label>
+                                {{ form.department }}
+                                {% if form.department.errors %}
+                                    <div class="text-danger">{{ form.department.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.stand.id_for_label }}" class="form-label">Stoisko</label>
+                                {{ form.stand }}
+                                {% if form.stand.errors %}
+                                    <div class="text-danger">{{ form.stand.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.material_type.id_for_label }}" class="form-label">Typ materiału</label>
+                                {{ form.material_type }}
+                                {% if form.material_type.errors %}
+                                    <div class="text-danger">{{ form.material_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                    <div class="text-danger">{{ form.status.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">Data od</label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}
+                                    <div class="text-danger">{{ form.start_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">Data do</label>
+                                {{ form.end_date }}
+                                {% if form.end_date.errors %}
+                                    <div class="text-danger">{{ form.end_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Format raportu</label>
+                                <div class="d-flex">
+                                    {% for radio in form.report_format %}
+                                        <div class="form-check form-check-inline">
+                                            {{ radio.tag }}
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.report_format.errors %}
+                                    <div class="text-danger">{{ form.report_format.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">Zawartość raportu</label>
+                                <div class="d-flex flex-column">
+                                    <div class="form-check mb-2">
+                                        {{ form.include_schedules }}
+                                        <label class="form-check-label" for="{{ form.include_schedules.id_for_label }}">
+                                            Uwzględnij harmonogramy emisji
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        {{ form.include_analytics }}
+                                        <label class="form-check-label" for="{{ form.include_analytics.id_for_label }}">
+                                            Uwzględnij dane analityczne (liczba wyświetleń, statystyki)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        {{ form.include_thumbnails }}
+                                        <label class="form-check-label" for="{{ form.include_thumbnails.id_for_label }}">
+                                            Uwzględnij miniatury materiałów (tylko PDF)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Anuluj</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-file-export me-2"></i>Generuj raport
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(function() {
+        // Dynamiczne wypełnianie pól wyboru
+        const storeSelect = $('#{{ form.store.id_for_label }}');
+        const departmentSelect = $('#{{ form.department.id_for_label }}');
+        const standSelect = $('#{{ form.stand.id_for_label }}');
+        
+        // Aktualizacja działów po wyborze sklepu
+        storeSelect.change(function() {
+            const storeId = $(this).val();
+            departmentSelect.empty().append('<option value="">Wszystkie działy</option>');
+            standSelect.empty().append('<option value="">Wszystkie stoiska</option>');
+            
+            if (storeId) {
+                // Pobieranie działów dla wybranego sklepu
+                $.ajax({
+                    url: `/advertisements/api/stores/${storeId}/departments/`,
+                    type: 'GET',
+                    success: function(data) {
+                        data.forEach(function(department) {
+                            departmentSelect.append(new Option(department.name, department.id));
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Aktualizacja stoisk po wyborze działu
+        departmentSelect.change(function() {
+            const departmentId = $(this).val();
+            standSelect.empty().append('<option value="">Wszystkie stoiska</option>');
+            
+            if (departmentId) {
+                // Pobieranie stoisk dla wybranego działu
+                $.ajax({
+                    url: `/advertisements/api/departments/${departmentId}/stands/`,
+                    type: 'GET',
+                    success: function(data) {
+                        data.forEach(function(stand) {
+                            standSelect.append(new Option(stand.name, stand.id));
+                        });
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

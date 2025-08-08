@@ -388,8 +388,8 @@
                                 <a href="{% url 'player-view' %}?stand={{ stand.id }}" class="list-group-item list-group-item-action" target="_blank">
                                     <i class="fas fa-play-circle me-2"></i>Podgląd odtwarzacza
                                 </a>
-                                <a href="#" class="list-group-item list-group-item-action" onclick="downloadMaterialsReport(); return false;">
-                                    <i class="fas fa-file-download me-2"></i>Raport materiałów reklamowych
+                                <a href="{% url 'materials-report' %}" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-file-export me-2"></i>Generuj raport materiałów
                                 </a>
                             </div>
                         </div>

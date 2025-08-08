@@ -287,3 +287,5 @@ class EmissionSchedule(models.Model):
             is_active_time = self.start_time <= current_time or current_time <= self.end_time
         
         return is_active_time
+    
+    

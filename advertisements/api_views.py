@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.utils import timezone
-from .models import PlayerStatus
+from .models import PlayerStatus, Store, Department
 
 
 from .models import Stand, AdvertisementMaterial, EmissionSchedule
@@ -350,3 +350,41 @@ def get_player_status(request, stand_id):
                       status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+    
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_departments_for_store(request, store_id):
+    """API do pobierania działów dla sklepu"""
+    try:
+        user = request.user
+        store = Store.objects.get(pk=store_id)
+        
+        # Sprawdź uprawnienia użytkownika
+        if user.is_store_admin() and user.managed_store != store:
+            return Response({"error": "Brak uprawnień"}, status=status.HTTP_403_FORBIDDEN)
+        
+        departments = Department.objects.filter(store=store)
+        data = [{"id": dept.id, "name": dept.name} for dept in departments]
+        return Response(data)
+    except Store.DoesNotExist:
+        return Response({"error": "Sklep nie istnieje"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_stands_for_department(request, department_id):
+    """API do pobierania stoisk dla działu"""
+    try:
+        user = request.user
+        department = Department.objects.get(pk=department_id)
+        
+        # Sprawdź uprawnienia użytkownika
+        if user.is_store_admin() and user.managed_store != department.store:
+            return Response({"error": "Brak uprawnień"}, status=status.HTTP_403_FORBIDDEN)
+        
+        stands = Stand.objects.filter(department=department)
+        data = [{"id": stand.id, "name": stand.name} for stand in stands]
+        return Response(data)
+    except Department.DoesNotExist:
+        return Response({"error": "Dział nie istnieje"}, status=status.HTTP_404_NOT_FOUND)

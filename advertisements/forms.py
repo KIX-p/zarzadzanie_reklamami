@@ -131,3 +131,86 @@ class EmissionScheduleForm(forms.ModelForm):
             cleaned_data['repeat_days'] = []
 
         return cleaned_data
+    
+    
+# Dodaj nową klasę formularza na końcu pliku
+
+class MaterialReportForm(forms.Form):
+    REPORT_FORMAT_CHOICES = (
+        ('pdf', 'PDF'),
+        ('excel', 'Excel'),
+        ('csv', 'CSV'),
+    )
+    
+    store = forms.ModelChoiceField(
+        queryset=Store.objects.all(),
+        required=False,
+        empty_label="Wszystkie sklepy",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.none(),
+        required=False,
+        empty_label="Wszystkie działy",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    stand = forms.ModelChoiceField(
+        queryset=Stand.objects.none(),
+        required=False,
+        empty_label="Wszystkie stoiska",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    material_type = forms.ChoiceField(
+        choices=(('', 'Wszystkie typy'),) + AdvertisementMaterial.TYPE_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    status = forms.ChoiceField(
+        choices=(('', 'Wszystkie statusy'),) + AdvertisementMaterial.STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    report_format = forms.ChoiceField(
+        choices=REPORT_FORMAT_CHOICES,
+        initial='pdf',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'})
+    )
+    include_schedules = forms.BooleanField(
+        required=False, 
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    include_analytics = forms.BooleanField(
+        required=False, 
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    include_thumbnails = forms.BooleanField(
+        required=False, 
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filter queryset based on user permissions
+        if user:
+            if user.is_superadmin():
+                pass  # Superadmin sees all
+            elif user.is_store_admin() and user.managed_store:
+                self.fields['store'].queryset = Store.objects.filter(id=user.managed_store.id)
+                self.fields['department'].queryset = Department.objects.filter(store=user.managed_store)
+                self.fields['stand'].queryset = Stand.objects.filter(department__store=user.managed_store)
+            elif user.is_editor() and user.managed_stand:
+                self.fields['store'].queryset = Store.objects.filter(departments__stands=user.managed_stand)
+                self.fields['department'].queryset = Department.objects.filter(stands=user.managed_stand)
+                self.fields['stand'].queryset = Stand.objects.filter(id=user.managed_stand.id)

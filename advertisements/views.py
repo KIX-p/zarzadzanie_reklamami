@@ -10,10 +10,19 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from datetime import datetime, timedelta
+import io
+
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from django.http import FileResponse, HttpResponse
+import csv
+import xlsxwriter
 
 from .models import Store, Department, Stand, AdvertisementMaterial, EmissionSchedule
 from accounts.permissions import SuperadminRequiredMixin, StoreAdminRequiredMixin, EditorRequiredMixin, StoreAccessMixin
-from .forms import AdvertisementMaterialForm, StandAnimationForm, EmissionScheduleForm
+from .forms import AdvertisementMaterialForm, StandAnimationForm, EmissionScheduleForm, MaterialReportForm
 from django.utils.timezone import now
 
 
@@ -467,3 +476,329 @@ def get_schedule_events(request, stand_id):
                     current_date = last_day_of_month.replace(year=year, month=month)
 
     return JsonResponse(events, safe=False)
+
+
+@login_required
+def generate_materials_report(request):
+    """
+    Widok do generowania zaawansowanych raportów materiałów reklamowych.
+    """
+    if request.method == 'POST':
+        form = MaterialReportForm(request.POST, user=request.user)
+        if form.is_valid():
+            # Pobierz dane z formularza
+            store = form.cleaned_data.get('store')
+            department = form.cleaned_data.get('department')
+            stand = form.cleaned_data.get('stand')
+            material_type = form.cleaned_data.get('material_type')
+            status = form.cleaned_data.get('status')
+            start_date = form.cleaned_data.get('start_date')
+            end_date = form.cleaned_data.get('end_date')
+            report_format = form.cleaned_data.get('report_format')
+            include_schedules = form.cleaned_data.get('include_schedules')
+            include_analytics = form.cleaned_data.get('include_analytics')
+            include_thumbnails = form.cleaned_data.get('include_thumbnails')
+            
+            # Buduj zapytanie
+            materials_query = AdvertisementMaterial.objects.all()
+            
+            # Ogranicz dostęp w zależności od roli użytkownika
+            if request.user.is_store_admin() and request.user.managed_store:
+                materials_query = materials_query.filter(stand__department__store=request.user.managed_store)
+            elif request.user.is_editor() and request.user.managed_stand:
+                materials_query = materials_query.filter(stand=request.user.managed_stand)
+                
+            # Zastosuj filtry
+            if store:
+                materials_query = materials_query.filter(stand__department__store=store)
+            if department:
+                materials_query = materials_query.filter(stand__department=department)
+            if stand:
+                materials_query = materials_query.filter(stand=stand)
+            if material_type:
+                materials_query = materials_query.filter(material_type=material_type)
+            if status:
+                materials_query = materials_query.filter(status=status)
+            if start_date:
+                materials_query = materials_query.filter(created_at__gte=start_date)
+            if end_date:
+                materials_query = materials_query.filter(created_at__lte=end_date)
+                
+            materials = materials_query.select_related('stand__department__store').order_by('-created_at')
+            
+            if report_format == 'pdf':
+                return generate_pdf_report(
+                    materials, 
+                    include_schedules=include_schedules,
+                    include_analytics=include_analytics,
+                    include_thumbnails=include_thumbnails
+                )
+            elif report_format == 'excel':
+                return generate_excel_report(
+                    materials, 
+                    include_schedules=include_schedules,
+                    include_analytics=include_analytics
+                )
+            elif report_format == 'csv':
+                return generate_csv_report(materials)
+    else:
+        form = MaterialReportForm(user=request.user)
+    
+    return render(request, 'advertisements/materials_report_form.html', {'form': form})
+
+def generate_pdf_report(materials, include_schedules=False, include_analytics=False, include_thumbnails=False):
+    """Generuje raport PDF z materiałów reklamowych"""
+    
+    # Utwórz bufor do przechowywania PDF
+    buffer = io.BytesIO()
+    
+    # Utwórz dokument PDF
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(letter),
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72
+    )
+    
+    # Styl dokumentu
+    styles = getSampleStyleSheet()
+    
+    # Tworzenie elementów raportu
+    elements = []
+    
+    # Tytuł
+    title_style = styles['Heading1']
+    title = Paragraph("Raport Materiałów Reklamowych", title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 20))
+    
+    # Data wygenerowania
+    date_style = styles['Normal']
+    import datetime
+    today = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+    date_text = Paragraph(f"Data wygenerowania: {today}", date_style)
+    elements.append(date_text)
+    elements.append(Spacer(1, 20))
+    
+    # Przygotowanie danych do tabeli
+    data = [['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania', 'Data utworzenia']]
+    
+    for material in materials:
+        row = [
+            material.id,
+            f"Materiał {material.id}",
+            material.get_material_type_display(),
+            material.stand.name,
+            material.stand.department.name,
+            material.stand.department.store.name,
+            material.get_status_display(),
+            f"{material.duration}s",
+            material.created_at.strftime("%d.%m.%Y")
+        ]
+        data.append(row)
+    
+    # Tworzenie tabeli
+    table = Table(data, repeatRows=1)
+    
+    # Style tabeli
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+    ]))
+    
+    elements.append(table)
+    
+    # Dodanie harmonogramów emisji, jeśli wybrano
+    if include_schedules:
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("Harmonogramy Emisji", styles['Heading2']))
+        elements.append(Spacer(1, 10))
+        
+        schedule_data = [['ID Materiału', 'Nazwa harmonogramu', 'Data rozpoczęcia', 'Data zakończenia', 'Czas emisji', 'Powtarzanie', 'Priorytet']]
+        
+        for material in materials:
+            schedules = material.schedules.all()
+            for schedule in schedules:
+                end_date = schedule.end_date.strftime("%d.%m.%Y") if schedule.end_date else "Bezterminowo"
+                row = [
+                    material.id,
+                    schedule.name,
+                    schedule.start_date.strftime("%d.%m.%Y"),
+                    end_date,
+                    f"{schedule.start_time.strftime('%H:%M')} - {schedule.end_time.strftime('%H:%M')}",
+                    schedule.get_repeat_type_display(),
+                    schedule.priority
+                ]
+                schedule_data.append(row)
+        
+        if len(schedule_data) > 1:
+            schedule_table = Table(schedule_data, repeatRows=1)
+            schedule_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ]))
+            elements.append(schedule_table)
+        else:
+            elements.append(Paragraph("Brak harmonogramów dla wybranych materiałów.", styles['Normal']))
+    
+    # Dodanie analityki, jeśli wybrano
+    if include_analytics:
+        elements.append(Spacer(1, 30))
+        elements.append(Paragraph("Statystyki Wyświetleń", styles['Heading2']))
+        elements.append(Spacer(1, 10))
+        
+        # Tutaj można dodać kod do generowania statystyk wyświetleń
+        # Na potrzeby przykładu dodajemy informację placeholder
+        elements.append(Paragraph("Statystyki będą dostępne w przyszłej wersji systemu.", styles['Normal']))
+    
+    # Generowanie dokumentu PDF
+    doc.build(elements)
+    
+    # Przygotowanie odpowiedzi
+    buffer.seek(0)
+    response = FileResponse(buffer, as_attachment=True, filename='raport_materialow.pdf')
+    return response
+
+def generate_excel_report(materials, include_schedules=False, include_analytics=False):
+    """Generuje raport Excel z materiałów reklamowych"""
+    
+    # Utwórz bufor do przechowywania pliku Excel
+    buffer = io.BytesIO()
+    
+    # Utwórz plik Excel
+    workbook = xlsxwriter.Workbook(buffer)
+    
+    # Formaty
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4472C4',
+        'color': 'white',
+        'border': 1
+    })
+    
+    cell_format = workbook.add_format({
+        'border': 1
+    })
+    
+    # Arkusz materiałów
+    materials_sheet = workbook.add_worksheet('Materiały')
+    
+    # Nagłówki
+    headers = ['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania (s)', 'Data utworzenia']
+    for col, header in enumerate(headers):
+        materials_sheet.write(0, col, header, header_format)
+    
+    # Dane materiałów
+    for row, material in enumerate(materials, start=1):
+        materials_sheet.write(row, 0, material.id, cell_format)
+        materials_sheet.write(row, 1, f"Materiał {material.id}", cell_format)
+        materials_sheet.write(row, 2, material.get_material_type_display(), cell_format)
+        materials_sheet.write(row, 3, material.stand.name, cell_format)
+        materials_sheet.write(row, 4, material.stand.department.name, cell_format)
+        materials_sheet.write(row, 5, material.stand.department.store.name, cell_format)
+        materials_sheet.write(row, 6, material.get_status_display(), cell_format)
+        materials_sheet.write(row, 7, material.duration, cell_format)
+        materials_sheet.write(row, 8, material.created_at.strftime("%d.%m.%Y"), cell_format)
+    
+    # Auto szerokość kolumn
+    materials_sheet.autofit()
+    
+    # Arkusz harmonogramów, jeśli wybrano
+    if include_schedules:
+        schedules_sheet = workbook.add_worksheet('Harmonogramy')
+        
+        # Nagłówki harmonogramów
+        schedule_headers = ['ID Materiału', 'Nazwa harmonogramu', 'Data rozpoczęcia', 'Data zakończenia', 
+                            'Czas rozpoczęcia', 'Czas zakończenia', 'Powtarzanie', 'Priorytet', 'Status']
+        for col, header in enumerate(schedule_headers):
+            schedules_sheet.write(0, col, header, header_format)
+        
+        # Dane harmonogramów
+        row = 1
+        for material in materials:
+            schedules = material.schedules.all()
+            for schedule in schedules:
+                schedules_sheet.write(row, 0, material.id, cell_format)
+                schedules_sheet.write(row, 1, schedule.name, cell_format)
+                schedules_sheet.write(row, 2, schedule.start_date.strftime("%d.%m.%Y"), cell_format)
+                if schedule.end_date:
+                    schedules_sheet.write(row, 3, schedule.end_date.strftime("%d.%m.%Y"), cell_format)
+                else:
+                    schedules_sheet.write(row, 3, "Bezterminowo", cell_format)
+                schedules_sheet.write(row, 4, schedule.start_time.strftime("%H:%M"), cell_format)
+                schedules_sheet.write(row, 5, schedule.end_time.strftime("%H:%M"), cell_format)
+                schedules_sheet.write(row, 6, schedule.get_repeat_type_display(), cell_format)
+                schedules_sheet.write(row, 7, schedule.priority, cell_format)
+                schedules_sheet.write(row, 8, "Aktywny" if schedule.is_active else "Nieaktywny", cell_format)
+                row += 1
+        
+        # Auto szerokość kolumn
+        schedules_sheet.autofit()
+    
+    # Arkusz analityki, jeśli wybrano
+    if include_analytics:
+        analytics_sheet = workbook.add_worksheet('Analityka')
+        
+        # Placeholder dla przyszłych funkcji analitycznych
+        analytics_sheet.write(0, 0, "Analityka wyświetleń będzie dostępna w przyszłej wersji systemu.", workbook.add_format({'bold': True}))
+    
+    # Zamknij plik i zwróć go
+    workbook.close()
+    buffer.seek(0)
+    
+    # Przygotowanie odpowiedzi
+    response = HttpResponse(buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=raport_materialow.xlsx'
+    return response
+
+def generate_csv_report(materials):
+    """Generuje raport CSV z materiałów reklamowych"""
+    
+    # Utwórz odpowiedź HTTP z typem pliku CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="raport_materialow.csv"'
+    
+    # Tworzenie pliku CSV
+    writer = csv.writer(response, delimiter=';')
+    
+    # Nagłówki
+    writer.writerow(['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania (s)', 'Data utworzenia'])
+    
+    # Dane materiałów
+    for material in materials:
+        writer.writerow([
+            material.id,
+            f"Materiał {material.id}",
+            material.get_material_type_display(),
+            material.stand.name,
+            material.stand.department.name,
+            material.stand.department.store.name,
+            material.get_status_display(),
+            material.duration,
+            material.created_at.strftime("%d.%m.%Y")
+        ])
+    
+    return response
