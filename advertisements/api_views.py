@@ -255,7 +255,7 @@ def get_token(request):
         "token": token.key,
         "stand": stand_info
     })
-
+    
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated, IsPlayerOrAdmin])
 def report_player_status(request):
@@ -264,38 +264,34 @@ def report_player_status(request):
     """
     try:
         user = request.user
+        if not (user.is_player() or user.is_superadmin() or user.is_editor()):
+            return Response({"error": "Brak uprawnień"}, status=status.HTTP_403_FORBIDDEN)
         
-        if not user.is_player() and not user.is_superadmin():
-            return Response({"error": "Tylko odtwarzacz może raportować status"}, 
-                          status=status.HTTP_403_FORBIDDEN)
+        stand = getattr(user, 'managed_stand', None)
+        if not stand:
+            return Response({"error": "Brak przypisanego stoiska"}, status=status.HTTP_400_BAD_REQUEST)
         
-        if not user.managed_stand:
-            return Response({"error": "Brak przypisanego stoiska"}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
-        # Pobierz lub stwórz status dla tego stoiska
-        player_status, created = PlayerStatus.objects.get_or_create(stand=user.managed_stand)
+        # Pobierz lub utwórz obiekt PlayerStatus
+        player_status, created = PlayerStatus.objects.get_or_create(stand=stand)
         
         # Aktualizuj informacje o statusie
-        player_status.is_online = True
         player_status.last_seen = timezone.now()
+        player_status.is_online = True
         player_status.ip_address = request.META.get('REMOTE_ADDR')
-        player_status.user_agent = request.META.get('HTTP_USER_AGENT')
+        player_status.user_agent = request.META.get('HTTP_USER_AGENT', '')
         
-        # Opcjonalne pola z request
+        # Aktualizacja opcjonalnych danych
         if 'screen_resolution' in request.data:
             player_status.screen_resolution = request.data['screen_resolution']
-        
         if 'version' in request.data:
             player_status.version = request.data['version']
-        
         if 'errors' in request.data:
             player_status.errors = request.data['errors']
-        
+            
         player_status.save()
         
-        return Response({"status": "success"})
-    
+        return Response({"status": "ok"})
+        
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -306,51 +302,39 @@ def get_player_status(request, stand_id):
     Get player status
     """
     try:
-        user = request.user
         stand = Stand.objects.get(pk=stand_id)
         
         # Sprawdź uprawnienia
+        user = request.user
         if not (user.is_superadmin() or 
-               (user.is_store_admin() and stand.department.store == user.managed_store) or
-               (user.is_editor() and stand == user.managed_stand) or
-               (user.is_player() and stand == user.managed_stand)):
-            return Response({"error": "Brak uprawnień"}, 
-                          status=status.HTTP_403_FORBIDDEN)
+                (user.is_store_admin() and stand.department.store == user.managed_store) or
+                (user.is_editor() and stand == user.managed_stand)):
+            return Response({"error": "Brak uprawnień"}, status=status.HTTP_403_FORBIDDEN)
+            
+        # Pobierz lub utwórz status odtwarzacza
+        player_status, created = PlayerStatus.objects.get_or_create(stand=stand)
         
-        try:
-            player_status = PlayerStatus.objects.get(stand=stand)
-            
-            # Jeśli ostatnia aktywność była ponad 5 minut temu, uznaj za offline
-            if player_status.last_seen:
-                if (timezone.now() - player_status.last_seen).total_seconds() > 300:
-                    player_status.is_online = False
-                    player_status.save()
-            
-            data = {
-                "is_online": player_status.is_online,
-                "last_seen": player_status.last_seen,
-                "ip_address": player_status.ip_address,
-                "screen_resolution": player_status.screen_resolution,
-                "version": player_status.version
-            }
-            
-            return Response(data)
+        # Sprawdź, czy status jest aktualny (ostatnia aktywność < 90 sekund)
+        from datetime import timedelta
+        is_online = False
+        if player_status.last_seen:
+            is_online = timezone.now() - player_status.last_seen <= timedelta(seconds=90)
+            if player_status.is_online != is_online:
+                player_status.is_online = is_online
+                player_status.save(update_fields=['is_online'])
         
-        except PlayerStatus.DoesNotExist:
-            return Response({
-                "is_online": False,
-                "last_seen": None,
-                "ip_address": None,
-                "screen_resolution": None,
-                "version": None
-            })
+        return Response({
+            "is_online": is_online,
+            "last_seen": player_status.last_seen.isoformat() if player_status.last_seen else None,
+            "ip_address": player_status.ip_address,
+            "screen_resolution": player_status.screen_resolution,
+            "version": player_status.version,
+        })
     
     except Stand.DoesNotExist:
-        return Response({"error": "Stoisko nie istnieje"}, 
-                      status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Stoisko nie istnieje"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
     
     
 @api_view(['GET'])

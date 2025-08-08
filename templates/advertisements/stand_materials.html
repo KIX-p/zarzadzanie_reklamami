@@ -353,22 +353,15 @@
                     </div>
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <span class="status-indicator status-offline" id="playerStatus"></span>
-                            <span id="statusText">Offline</span>
+                            <span id="playerStatus" class="status-indicator status-offline"></span>
+                            <h5 class="mb-0" id="statusText">Offline</h5>
                         </div>
-
-                        <p><strong>Ostatnia aktywność:</strong> <span id="lastActivity">Nigdy</span></p>
-                        <p><strong>Wersja aplikacji:</strong> <span id="playerVersion">-</span></p>
-                        <p><strong>Rozdzielczość:</strong> <span id="playerResolution">-</span></p>
-
-                        <div class="alert alert-info mt-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Status jest aktualizowany co 60 sekund. Naciśnij przycisk poniżej, aby odświeżyć ręcznie.
-                        </div>
-
-                        <div class="d-grid">
-                            <button class="btn btn-outline-primary" id="refreshStatus">
-                                <i class="fas fa-sync me-1"></i> Odśwież status
+                        <p><strong>Ostatnia aktywność:</strong> <span id="lastActivity">Nieznana</span></p>
+                        <p><strong>Wersja aplikacji:</strong> <span id="playerVersion">Nieznana</span></p>
+                        <p><strong>Rozdzielczość:</strong> <span id="playerResolution">Nieznana</span></p>
+                        <div class="d-grid gap-2">
+                            <button id="refreshStatus" class="btn btn-outline-primary">
+                                <i class="fas fa-sync-alt me-1"></i> Odśwież status
                             </button>
                         </div>
                     </div>
@@ -593,24 +586,69 @@
             downloadAnchorNode.remove();
         });
 
-        // Symulacja statusu odtwarzacza (w rzeczywistym systemie powinno być pobierane z API)
-        $("#refreshStatus").click(function() {
-            // Symulujemy odpowiedź z API
-            const randomStatus = Math.random() > 0.3;  // 70% szans na online
+        // Funkcja do pobierania statusu odtwarzacza z API
+        function loadPlayerStatus() {
+            const standId = {{ stand.id }};
+            $.ajax({
+                url: `/advertisements/api/player/status/${standId}/`,
+                type: 'GET',
+                beforeSend: function() {
+                    $("#refreshStatus").html('<i class="fas fa-spinner fa-spin me-1"></i> Sprawdzanie...');
+                    $("#refreshStatus").prop('disabled', true);
+                },
+                success: function(data) {
+                    if (data.is_online) {
+                        $("#playerStatus").removeClass("status-offline").addClass("status-online");
+                        $("#statusText").text("Online");
+                    } else {
+                        $("#playerStatus").removeClass("status-online").addClass("status-offline");
+                        $("#statusText").text("Offline");
+                    }
+                    
+                    // Aktualizacja dodatkowych informacji
+                    if (data.last_seen) {
+                        const lastSeen = new Date(data.last_seen);
+                        const now = new Date();
+                        const diffMinutes = Math.floor((now - lastSeen) / (1000 * 60));
+                        
+                        if (diffMinutes < 2) {
+                            $("#lastActivity").text("Teraz");
+                        } else {
+                            $("#lastActivity").text(`${diffMinutes} min temu`);
+                        }
+                    } else {
+                        $("#lastActivity").text("Nigdy");
+                    }
+                    
+                    // Aktualizuj informacje o wersji i rozdzielczości
+                    $("#playerVersion").text(data.version || "Nieznana");
+                    $("#playerResolution").text(data.screen_resolution || "Nieznana");
+                    
+                    showToast("Status odtwarzacza zaktualizowany", "success");
+                },
+                error: function(xhr, status, error) {
+                    showToast("Błąd przy pobieraniu statusu", "danger");
+                    console.error("Błąd:", error);
+                },
+                complete: function() {
+                    $("#refreshStatus").html('<i class="fas fa-sync-alt me-1"></i> Odśwież status');
+                    $("#refreshStatus").prop('disabled', false);
+                }
+            });
+        }
 
-            if (randomStatus) {
-                $("#playerStatus").removeClass("status-offline").addClass("status-online");
-                $("#statusText").text("Online");
-                $("#lastActivity").text("Teraz");
-                $("#playerVersion").text("1.0.0");
-                $("#playerResolution").text("1920x1080");
-            } else {
-                $("#playerStatus").removeClass("status-online").addClass("status-offline");
-                $("#statusText").text("Offline");
-                // Pozostałe wartości bez zmian
-            }
-
-            showToast("Status odtwarzacza zaktualizowany", "success");
+        // I dodaj uruchomienie przy ładowaniu strony + interwał
+        $(function() {
+            // Ładowanie statusu odtwarzacza przy załadowaniu strony
+            loadPlayerStatus();
+            
+            // Ustawienie interwału odświeżania co 30 sekund
+            setInterval(loadPlayerStatus, 30000);
+            
+            // Obsługa przycisku odświeżania
+            $("#refreshStatus").click(function() {
+                loadPlayerStatus();
+            });
         });
 
         // Funkcja do wyświetlania powiadomień

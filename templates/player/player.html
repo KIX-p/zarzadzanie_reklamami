@@ -529,6 +529,69 @@
         setTimeout(() => {
             window.location.reload();
         }, 60 * 60 * 1000);
+
+
+        // Dodaj tę funkcję w sekcji ze skryptem
+        async function reportStatus(withErrors = null) {
+            try {
+                const data = {
+                    version: PLAYER_VERSION,
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                };
+                
+                if (withErrors) {
+                    data.errors = withErrors;
+                }
+                
+                const response = await fetch(STATUS_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    isOnline = true;
+                    document.getElementById('statusIndicator').classList.remove('offline');
+                } else {
+                    isOnline = false;
+                    document.getElementById('statusIndicator').classList.add('offline');
+                    console.error("Error reporting status:", response.statusText);
+                }
+            } catch (error) {
+                isOnline = false;
+                document.getElementById('statusIndicator').classList.add('offline');
+                console.error("Failed to report status:", error);
+            }
+        }
+
+        // I wywołuj tę funkcję regularnie
+        function startStatusReporting() {
+            // Początkowy status report
+            reportStatus();
+            
+            // Ustawienie interwału
+            setInterval(() => {
+                reportStatus();
+            }, 60000); // co 60 sekund
+        }
+
+        // Rozpocznij raportowanie po załadowaniu materiałów
+        window.addEventListener('load', () => {
+            toggleDebugMode();
+            loadMaterials()
+                .then(() => {
+                    startStatusReporting(); // Rozpocznij raportowanie statusu
+                    document.getElementById('statusIndicator').style.display = 'block';
+                })
+                .catch(error => {
+                    showError(`Nie udało się załadować materiałów: ${error.message}`);
+                    reportStatus(`Błąd ładowania materiałów: ${error.message}`);
+                });
+        });
     </script>
 </body>
 </html>
