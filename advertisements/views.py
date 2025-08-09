@@ -8,10 +8,10 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.mixins import LoginRequiredMixin
-
 from datetime import datetime, timedelta
 import io
-
+import random
+import colorsys
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
@@ -384,6 +384,16 @@ class ScheduleDeleteView(EditorRequiredMixin, StoreAccessMixin, DeleteView):
         return reverse_lazy('store-list')
 
 
+def get_random_color():
+    """Generuje losowy kolor w formacie szesnastkowym."""
+    # Użycie HSV dla lepszej różnorodności i czytelności kolorów
+    h = random.random()
+    s = 0.5 + random.random() * 0.5  # Saturation
+    v = 0.5 + random.random() * 0.5  # Value
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
+
+
 def get_schedule_events(request, stand_id):
     start_date = request.GET.get('start')
     end_date = request.GET.get('end')
@@ -410,14 +420,16 @@ def get_schedule_events(request, stand_id):
         event_start_time = schedule.start_time.isoformat()
         event_end_time = schedule.end_time.isoformat()
 
-        # Zmodyfikowany kod do obsługi eventów z wieloma materiałami
         event_title = f"{schedule.name} ({', '.join([mat['type'] for mat in materials_data])})"
+
+        # Generowanie unikalnego koloru dla każdej emisji
+        random_color = get_random_color()
 
         base_event = {
             'id': schedule.id,
             'title': event_title,
-            'backgroundColor': '#3788d8',  # Domyślny kolor
-            'borderColor': '#3788d8',
+            'backgroundColor': random_color,  # Przypisanie losowego koloru
+            'borderColor': random_color,  # Przypisanie tego samego koloru dla ramki
             'textColor': '#ffffff',
             'extendedProps': {
                 'materials': materials_data,
@@ -430,7 +442,7 @@ def get_schedule_events(request, stand_id):
         if schedule.repeat_type == 'none':
             base_event.update({
                 'start': f"{schedule.start_date.isoformat()}T{event_start_time}",
-                'end': f"{schedule.start_date.isoformat()}T{event_end_time}",
+                'end': f"{schedule.end_date.isoformat()}T{event_end_time}",
             })
             events.append(base_event)
 
@@ -456,13 +468,15 @@ def get_schedule_events(request, stand_id):
 
         elif schedule.repeat_type == 'monthly':
             current_date = schedule.start_date
-            while current_date <= (schedule.end_date or end.date()):
-                if current_date.day == schedule.start_date.day and current_date >= start.date():
+            end_limit = schedule.end_date or end.date()
+            while current_date <= end_limit:
+                if current_date.day == schedule.start_date.day:
                     monthly_event = base_event.copy()
                     monthly_event['start'] = f"{current_date.isoformat()}T{event_start_time}"
                     monthly_event['end'] = f"{current_date.isoformat()}T{event_end_time}"
                     events.append(monthly_event)
 
+                # Obliczenie następnego miesiąca
                 next_month = current_date.month + 1
                 year = current_date.year + (next_month > 12)
                 month = (next_month - 1) % 12 + 1
@@ -476,7 +490,6 @@ def get_schedule_events(request, stand_id):
                     current_date = last_day_of_month.replace(year=year, month=month)
 
     return JsonResponse(events, safe=False)
-
 
 @login_required
 def generate_materials_report(request):
@@ -498,16 +511,16 @@ def generate_materials_report(request):
             include_schedules = form.cleaned_data.get('include_schedules')
             include_analytics = form.cleaned_data.get('include_analytics')
             include_thumbnails = form.cleaned_data.get('include_thumbnails')
-            
+
             # Buduj zapytanie
             materials_query = AdvertisementMaterial.objects.all()
-            
+
             # Ogranicz dostęp w zależności od roli użytkownika
             if request.user.is_store_admin() and request.user.managed_store:
                 materials_query = materials_query.filter(stand__department__store=request.user.managed_store)
             elif request.user.is_editor() and request.user.managed_stand:
                 materials_query = materials_query.filter(stand=request.user.managed_stand)
-                
+
             # Zastosuj filtry
             if store:
                 materials_query = materials_query.filter(stand__department__store=store)
@@ -523,19 +536,19 @@ def generate_materials_report(request):
                 materials_query = materials_query.filter(created_at__gte=start_date)
             if end_date:
                 materials_query = materials_query.filter(created_at__lte=end_date)
-                
+
             materials = materials_query.select_related('stand__department__store').order_by('-created_at')
-            
+
             if report_format == 'pdf':
                 return generate_pdf_report(
-                    materials, 
+                    materials,
                     include_schedules=include_schedules,
                     include_analytics=include_analytics,
                     include_thumbnails=include_thumbnails
                 )
             elif report_format == 'excel':
                 return generate_excel_report(
-                    materials, 
+                    materials,
                     include_schedules=include_schedules,
                     include_analytics=include_analytics
                 )
@@ -543,15 +556,16 @@ def generate_materials_report(request):
                 return generate_csv_report(materials)
     else:
         form = MaterialReportForm(user=request.user)
-    
+
     return render(request, 'advertisements/materials_report_form.html', {'form': form})
+
 
 def generate_pdf_report(materials, include_schedules=False, include_analytics=False, include_thumbnails=False):
     """Generuje raport PDF z materiałów reklamowych"""
-    
+
     # Utwórz bufor do przechowywania PDF
     buffer = io.BytesIO()
-    
+
     # Utwórz dokument PDF
     doc = SimpleDocTemplate(
         buffer,
@@ -561,19 +575,19 @@ def generate_pdf_report(materials, include_schedules=False, include_analytics=Fa
         topMargin=72,
         bottomMargin=72
     )
-    
+
     # Styl dokumentu
     styles = getSampleStyleSheet()
-    
+
     # Tworzenie elementów raportu
     elements = []
-    
+
     # Tytuł
     title_style = styles['Heading1']
     title = Paragraph("Raport Materiałów Reklamowych", title_style)
     elements.append(title)
     elements.append(Spacer(1, 20))
-    
+
     # Data wygenerowania
     date_style = styles['Normal']
     import datetime
@@ -581,10 +595,10 @@ def generate_pdf_report(materials, include_schedules=False, include_analytics=Fa
     date_text = Paragraph(f"Data wygenerowania: {today}", date_style)
     elements.append(date_text)
     elements.append(Spacer(1, 20))
-    
+
     # Przygotowanie danych do tabeli
     data = [['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania', 'Data utworzenia']]
-    
+
     for material in materials:
         row = [
             material.id,
@@ -598,10 +612,10 @@ def generate_pdf_report(materials, include_schedules=False, include_analytics=Fa
             material.created_at.strftime("%d.%m.%Y")
         ]
         data.append(row)
-    
+
     # Tworzenie tabeli
     table = Table(data, repeatRows=1)
-    
+
     # Style tabeli
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -618,17 +632,19 @@ def generate_pdf_report(materials, include_schedules=False, include_analytics=Fa
         ('FONTSIZE', (0, 1), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
     ]))
-    
+
     elements.append(table)
-    
+
     # Dodanie harmonogramów emisji, jeśli wybrano
     if include_schedules:
         elements.append(Spacer(1, 30))
         elements.append(Paragraph("Harmonogramy Emisji", styles['Heading2']))
         elements.append(Spacer(1, 10))
-        
-        schedule_data = [['ID Materiału', 'Nazwa harmonogramu', 'Data rozpoczęcia', 'Data zakończenia', 'Czas emisji', 'Powtarzanie', 'Priorytet']]
-        
+
+        schedule_data = [
+            ['ID Materiału', 'Nazwa harmonogramu', 'Data rozpoczęcia', 'Data zakończenia', 'Czas emisji', 'Powtarzanie',
+             'Priorytet']]
+
         for material in materials:
             schedules = material.schedules.all()
             for schedule in schedules:
@@ -643,7 +659,7 @@ def generate_pdf_report(materials, include_schedules=False, include_analytics=Fa
                     schedule.priority
                 ]
                 schedule_data.append(row)
-        
+
         if len(schedule_data) > 1:
             schedule_table = Table(schedule_data, repeatRows=1)
             schedule_table.setStyle(TableStyle([
@@ -663,34 +679,35 @@ def generate_pdf_report(materials, include_schedules=False, include_analytics=Fa
             elements.append(schedule_table)
         else:
             elements.append(Paragraph("Brak harmonogramów dla wybranych materiałów.", styles['Normal']))
-    
+
     # Dodanie analityki, jeśli wybrano
     if include_analytics:
         elements.append(Spacer(1, 30))
         elements.append(Paragraph("Statystyki Wyświetleń", styles['Heading2']))
         elements.append(Spacer(1, 10))
-        
+
         # Tutaj można dodać kod do generowania statystyk wyświetleń
         # Na potrzeby przykładu dodajemy informację placeholder
         elements.append(Paragraph("Statystyki będą dostępne w przyszłej wersji systemu.", styles['Normal']))
-    
+
     # Generowanie dokumentu PDF
     doc.build(elements)
-    
+
     # Przygotowanie odpowiedzi
     buffer.seek(0)
     response = FileResponse(buffer, as_attachment=True, filename='raport_materialow.pdf')
     return response
 
+
 def generate_excel_report(materials, include_schedules=False, include_analytics=False):
     """Generuje raport Excel z materiałów reklamowych"""
-    
+
     # Utwórz bufor do przechowywania pliku Excel
     buffer = io.BytesIO()
-    
+
     # Utwórz plik Excel
     workbook = xlsxwriter.Workbook(buffer)
-    
+
     # Formaty
     header_format = workbook.add_format({
         'bold': True,
@@ -698,19 +715,19 @@ def generate_excel_report(materials, include_schedules=False, include_analytics=
         'color': 'white',
         'border': 1
     })
-    
+
     cell_format = workbook.add_format({
         'border': 1
     })
-    
+
     # Arkusz materiałów
     materials_sheet = workbook.add_worksheet('Materiały')
-    
+
     # Nagłówki
     headers = ['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania (s)', 'Data utworzenia']
     for col, header in enumerate(headers):
         materials_sheet.write(0, col, header, header_format)
-    
+
     # Dane materiałów
     for row, material in enumerate(materials, start=1):
         materials_sheet.write(row, 0, material.id, cell_format)
@@ -722,20 +739,20 @@ def generate_excel_report(materials, include_schedules=False, include_analytics=
         materials_sheet.write(row, 6, material.get_status_display(), cell_format)
         materials_sheet.write(row, 7, material.duration, cell_format)
         materials_sheet.write(row, 8, material.created_at.strftime("%d.%m.%Y"), cell_format)
-    
+
     # Auto szerokość kolumn
     materials_sheet.autofit()
-    
+
     # Arkusz harmonogramów, jeśli wybrano
     if include_schedules:
         schedules_sheet = workbook.add_worksheet('Harmonogramy')
-        
+
         # Nagłówki harmonogramów
-        schedule_headers = ['ID Materiału', 'Nazwa harmonogramu', 'Data rozpoczęcia', 'Data zakończenia', 
+        schedule_headers = ['ID Materiału', 'Nazwa harmonogramu', 'Data rozpoczęcia', 'Data zakończenia',
                             'Czas rozpoczęcia', 'Czas zakończenia', 'Powtarzanie', 'Priorytet', 'Status']
         for col, header in enumerate(schedule_headers):
             schedules_sheet.write(0, col, header, header_format)
-        
+
         # Dane harmonogramów
         row = 1
         for material in materials:
@@ -754,39 +771,43 @@ def generate_excel_report(materials, include_schedules=False, include_analytics=
                 schedules_sheet.write(row, 7, schedule.priority, cell_format)
                 schedules_sheet.write(row, 8, "Aktywny" if schedule.is_active else "Nieaktywny", cell_format)
                 row += 1
-        
+
         # Auto szerokość kolumn
         schedules_sheet.autofit()
-    
+
     # Arkusz analityki, jeśli wybrano
     if include_analytics:
         analytics_sheet = workbook.add_worksheet('Analityka')
-        
+
         # Placeholder dla przyszłych funkcji analitycznych
-        analytics_sheet.write(0, 0, "Analityka wyświetleń będzie dostępna w przyszłej wersji systemu.", workbook.add_format({'bold': True}))
-    
+        analytics_sheet.write(0, 0, "Analityka wyświetleń będzie dostępna w przyszłej wersji systemu.",
+                              workbook.add_format({'bold': True}))
+
     # Zamknij plik i zwróć go
     workbook.close()
     buffer.seek(0)
-    
+
     # Przygotowanie odpowiedzi
-    response = HttpResponse(buffer.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response = HttpResponse(buffer.getvalue(),
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename=raport_materialow.xlsx'
     return response
 
+
 def generate_csv_report(materials):
     """Generuje raport CSV z materiałów reklamowych"""
-    
+
     # Utwórz odpowiedź HTTP z typem pliku CSV
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="raport_materialow.csv"'
-    
+
     # Tworzenie pliku CSV
     writer = csv.writer(response, delimiter=';')
-    
+
     # Nagłówki
-    writer.writerow(['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania (s)', 'Data utworzenia'])
-    
+    writer.writerow(
+        ['ID', 'Nazwa', 'Typ', 'Stoisko', 'Dział', 'Sklep', 'Status', 'Czas trwania (s)', 'Data utworzenia'])
+
     # Dane materiałów
     for material in materials:
         writer.writerow([
@@ -800,5 +821,5 @@ def generate_csv_report(materials):
             material.duration,
             material.created_at.strftime("%d.%m.%Y")
         ])
-    
+
     return response

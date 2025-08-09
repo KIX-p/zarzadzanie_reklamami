@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/player/status/<int:stand_id>/', api_views.get_player_status, name='api-get-player-status'),
     path('api/player/status/', api_views.report_player_status, name='api-player-status'),
     path('api/player/status/<int:stand_id>/', api_views.get_player_status, name='api-get-player-status'),
+    path('api/schedule-events/<int:stand_id>/', api_views.api_schedule_events, name='api-schedule-events'),
 
     # Player view
     path('player/', views.PlayerView.as_view(), name='player-view'),

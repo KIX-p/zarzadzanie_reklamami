@@ -5,6 +5,10 @@ from rest_framework.authtoken.models import Token
 from django.utils import timezone
 from .models import PlayerStatus, Store, Department
 
+from rest_framework.decorators import api_view
+from django.http import JsonResponse
+from datetime import datetime, timedelta
+
 
 from .models import Stand, AdvertisementMaterial, EmissionSchedule
 from .serializers import StandSerializer, AdvertisementMaterialSerializer
@@ -210,6 +214,55 @@ def schedule_details(request, schedule_id):
     except EmissionSchedule.DoesNotExist:
         return Response({"error": "Harmonogram nie istnieje"}, 
                       status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def api_schedule_events(request, stand_id):
+    schedules = EmissionSchedule.objects.filter(
+        materials__stand_id=stand_id,
+        is_active=True
+    ).distinct()
+
+    events = []
+
+    for s in schedules:
+        # Ustal daty bazowe
+        end_date = s.end_date if s.end_date else s.start_date
+        start_datetime = datetime.combine(s.start_date, s.start_time)
+        end_datetime = datetime.combine(end_date, s.end_time)
+
+        # Jeżeli harmonogram nocny, przesuwamy koniec o 1 dzień
+        if s.start_time > s.end_time:
+            end_datetime += timedelta(days=1)
+
+        # Jeżeli mimo to koniec jest wcześniejszy lub równy początkowi, też dodaj dzień
+        if end_datetime <= start_datetime:
+            end_datetime += timedelta(days=1)
+
+        print(start_datetime.isoformat())
+        print(end_datetime.isoformat())
+
+        events.append({
+            "id": s.id,
+            "title": s.name,
+            "start": start_datetime.isoformat(),
+            "end": end_datetime.isoformat(),
+            "allDay": False,
+            "backgroundColor": "#3788d8",
+            "borderColor": "#3788d8",
+            "textColor": "#ffffff",
+            "extendedProps": {
+                "priority": s.priority,
+                "repeat_type": s.repeat_type,
+                "isOvernight": s.start_time > s.end_time,
+                "materials": list(s.materials.values()),  # jeśli chcesz wysłać materiały
+                "stand_id": stand_id,
+            }
+        })
+
+    return JsonResponse(events, safe=False)
+
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
