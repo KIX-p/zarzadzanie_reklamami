@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/player/status/', api_views.report_player_status, name='api-player-status'),
     path('api/player/status/<int:stand_id>/', api_views.get_player_status, name='api-get-player-status'),
     path('api/schedule-events/<int:stand_id>/', api_views.api_schedule_events, name='api-schedule-events'),
+    path('api/player/reset_token/', api_views.reset_player_token, name='api-reset-player-token'),
 
     # Player view
     path('player/', views.PlayerView.as_view(), name='player-view'),

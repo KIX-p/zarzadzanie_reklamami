@@ -425,3 +425,30 @@ def get_stands_for_department(request, department_id):
         return Response(data)
     except Department.DoesNotExist:
         return Response({"error": "Dział nie istnieje"}, status=status.HTTP_404_NOT_FOUND)
+    
+    
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated, IsPlayerOrAdmin])
+def reset_player_token(request):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Wywołano reset_player_token")
+    user = request.user
+    logger.info(f"Użytkownik: {user} ({user.role})")
+
+    # Edytor resetuje swój własny token
+    if user.is_editor():
+        Token.objects.filter(user=user).delete()
+        new_token = Token.objects.create(user=user)
+        logger.info(f"Nowy token dla edytora {user.username}: {new_token.key}")
+        return Response({'token': new_token.key})
+
+    # Odtwarzacz może zresetować swój token
+    if user.is_player():
+        Token.objects.filter(user=user).delete()
+        new_token = Token.objects.create(user=user)
+        logger.info(f"Nowy token dla playera {user.username}: {new_token.key}")
+        return Response({'token': new_token.key})
+
+    logger.warning("Brak uprawnień do resetu tokenu.")
+    return Response({'error': 'Brak uprawnień'}, status=status.HTTP_403_FORBIDDEN)

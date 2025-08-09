@@ -189,11 +189,36 @@
                 });
         });
         
-        // Reset tokenu (powinien być obsługiwany przez AJAX)
         $("#resetToken").click(function() {
             if (confirm("Czy na pewno chcesz zresetować token? Istniejące połączenia zostaną przerwane.")) {
-                // Tu powinno być żądanie AJAX do resetu tokenu
-                showToast("Funkcja w przygotowaniu", "warning");
+                $.ajax({
+                    url: "/advertisements/api/player/reset_token/",
+                    type: "POST",
+                    headers: {
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    success: function(data) {
+                        // Aktualizuj token w polu tekstowym
+                        $(".token-box").text(data.token);
+                        
+                        // Regeneruj kod QR z nowym tokenem
+                        $("#qrcode").empty();
+                        const playerUrl = "{% url 'player-view' %}?token=" + data.token + "&stand={{ stand.id }}";
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: playerUrl,
+                            width: 180,
+                            height: 180,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                        
+                        showToast("Token został zresetowany", "success");
+                    },
+                    error: function(xhr) {
+                        showToast("Nie udało się zresetować tokenu: " + xhr.responseText, "danger");
+                    }
+                });
             }
         });
         
