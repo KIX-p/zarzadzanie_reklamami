@@ -50,6 +50,7 @@ urlpatterns = [
     path('schedule/<int:pk>/update/', views.ScheduleUpdateView.as_view(), name='schedule-update'),
     path('schedule/<int:pk>/delete/', views.ScheduleDeleteView.as_view(), name='schedule-delete'),
     path('api/stand/<int:stand_id>/schedule/events/', views.get_schedule_events, name='api-schedule-events'),
+    path('api/schedules/update-statuses/', api_views.update_schedule_statuses, name='api-update-schedule-statuses'),
     
     # Raportowanie
     path('reports/materials/', views.generate_materials_report, name='materials-report'),

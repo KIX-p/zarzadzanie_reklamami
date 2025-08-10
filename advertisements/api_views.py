@@ -452,3 +452,28 @@ def reset_player_token(request):
 
     logger.warning("Brak uprawnień do resetu tokenu.")
     return Response({'error': 'Brak uprawnień'}, status=status.HTTP_403_FORBIDDEN)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def update_schedule_statuses(request):
+    """
+    Ręczna aktualizacja statusów harmonogramów
+    """
+    if not (request.user.is_superadmin() or request.user.is_store_admin()):
+        return Response({"error": "Brak uprawnień"}, status=status.HTTP_403_FORBIDDEN)
+        
+    now = timezone.now()
+    expired_count = 0
+    
+    active_schedules = EmissionSchedule.objects.filter(is_active=True)
+    for schedule in active_schedules:
+        if schedule.has_ended():
+            schedule.is_active = False
+            schedule.save()
+            expired_count += 1
+            
+    return Response({
+        "status": "success",
+        "deactivated": expired_count
+    })

@@ -8,6 +8,7 @@ from django.dispatch import receiver
 
 import logging
 import traceback
+from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 class Store(models.Model):
@@ -218,6 +219,26 @@ class EmissionSchedule(models.Model):
     def __str__(self):
         return f"{self.name} ({self.start_date} - {self.end_date or 'brak końca'})"
 
+    def has_ended(self, current_date=None, current_time=None):
+        """Sprawdza czy harmonogram się zakończył"""
+        now = timezone.now()
+        current_date = current_date or now.date()
+        current_time = current_time or now.time()
+        
+        # Harmonogramy bezterminowe (bez end_date) nigdy nie wygasają
+        if not self.end_date:
+            return False
+            
+        # Sprawdź, czy minęła data zakończenia
+        if self.end_date < current_date:
+            return True
+            
+        # Sprawdź, czy to ostatni dzień i minęła godzina zakończenia
+        if self.end_date == current_date and self.end_time < current_time:
+            return True
+            
+        return False    
+    
     def is_scheduled_for_date(self, check_date):
         """Sprawdza czy harmonogram jest aktywny w podanym dniu"""
         # Sprawdź czy data jest w zakresie

@@ -410,6 +410,14 @@ def get_schedule_events(request, stand_id):
 
     events = []
     for schedule in schedules:
+        # Pomijaj harmonogramy bez wymaganych dat/godzin
+        if not schedule.start_date or not schedule.start_time:
+            continue
+
+        # Ustal wartości końcowe, jeśli brak to użyj startowych
+        end_date_val = schedule.end_date or schedule.start_date
+        end_time_val = schedule.end_time or schedule.start_time
+
         materials_data = []
         for material in schedule.materials.all():
             materials_data.append({
@@ -417,19 +425,18 @@ def get_schedule_events(request, stand_id):
                 'type': material.get_material_type_display(),
             })
 
-        event_start_time = schedule.start_time.isoformat()
-        event_end_time = schedule.end_time.isoformat()
+        event_start_time = schedule.start_time.isoformat() if schedule.start_time else "00:00:00"
+        event_end_time = end_time_val.isoformat() if end_time_val else "23:59:59"
 
         event_title = f"{schedule.name} ({', '.join([mat['type'] for mat in materials_data])})"
 
-        # Generowanie unikalnego koloru dla każdej emisji
         random_color = get_random_color()
 
         base_event = {
             'id': schedule.id,
             'title': event_title,
-            'backgroundColor': random_color,  # Przypisanie losowego koloru
-            'borderColor': random_color,  # Przypisanie tego samego koloru dla ramki
+            'backgroundColor': random_color,
+            'borderColor': random_color,
             'textColor': '#ffffff',
             'extendedProps': {
                 'materials': materials_data,
@@ -442,7 +449,7 @@ def get_schedule_events(request, stand_id):
         if schedule.repeat_type == 'none':
             base_event.update({
                 'start': f"{schedule.start_date.isoformat()}T{event_start_time}",
-                'end': f"{schedule.end_date.isoformat()}T{event_end_time}",
+                'end': f"{end_date_val.isoformat()}T{event_end_time}",
             })
             events.append(base_event)
 
@@ -452,7 +459,7 @@ def get_schedule_events(request, stand_id):
                 'startTime': event_start_time,
                 'endTime': event_end_time,
                 'startRecur': schedule.start_date.isoformat(),
-                'endRecur': schedule.end_date.isoformat() if schedule.end_date else None
+                'endRecur': end_date_val.isoformat() if end_date_val else None
             })
             events.append(base_event)
 
@@ -462,13 +469,13 @@ def get_schedule_events(request, stand_id):
                 'startTime': event_start_time,
                 'endTime': event_end_time,
                 'startRecur': schedule.start_date.isoformat(),
-                'endRecur': schedule.end_date.isoformat() if schedule.end_date else None
+                'endRecur': end_date_val.isoformat() if end_date_val else None
             })
             events.append(base_event)
 
         elif schedule.repeat_type == 'monthly':
             current_date = schedule.start_date
-            end_limit = schedule.end_date or end.date()
+            end_limit = end_date_val or end.date()
             while current_date <= end_limit:
                 if current_date.day == schedule.start_date.day:
                     monthly_event = base_event.copy()
@@ -484,9 +491,7 @@ def get_schedule_events(request, stand_id):
                 try:
                     current_date = current_date.replace(year=year, month=month)
                 except ValueError:
-                    # Obsługa błędów, gdy miesiąc nie ma danego dnia (np. 31 lutego)
-                    last_day_of_month = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(
-                        days=1)
+                    last_day_of_month = (current_date.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
                     current_date = last_day_of_month.replace(year=year, month=month)
 
     return JsonResponse(events, safe=False)

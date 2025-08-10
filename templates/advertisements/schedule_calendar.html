@@ -309,6 +309,7 @@
 
         // Pobranie danych o emisjach dla bieżącego miesiąca
         const allEvents = await fetchEvents(year, month);
+        console.log("DEBUG: Pobrane eventy z API:", allEvents);
 
         // Zapisz unikalne kolory dla każdego harmonogramu
         const scheduleColors = {};
@@ -335,8 +336,23 @@
             const eventsForDay = allEvents.filter(event => {
                 const startDate = new Date(event.start);
                 const endDate = new Date(event.end);
-                return currentDay >= startDate && currentDay <= endDate;
+                
+                // Porównaj tylko części datowe (rok, miesiąc, dzień), ignorując czas
+                const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+                const currentDayOnly = new Date(currentDay.getFullYear(), currentDay.getMonth(), currentDay.getDate());
+                
+                const isInDay = (currentDayOnly >= startDateOnly && currentDayOnly <= endDateOnly);
+                
+                if (isInDay) {
+                    console.log(`DEBUG: Event "${event.title}" pasuje do dnia ${currentDay.toISOString().slice(0,10)} (start: ${event.start}, end: ${event.end})`);
+                }
+                return isInDay;
             });
+
+            if (eventsForDay.length === 0) {
+                console.log(`DEBUG: Brak eventów dla dnia ${currentDay.toISOString().slice(0,10)}`);
+            }
 
             eventsForDay.forEach(event => {
                 const eventItem = document.createElement('div');
@@ -354,6 +370,8 @@
                 }
                 eventItem.style.backgroundColor = scheduleColors[event.id];
 
+                console.log(`DEBUG: Dodaję event "${event.title}" do dnia ${currentDay.toISOString().slice(0,10)}`);
+
                 dayCell.appendChild(eventItem);
             });
 
@@ -361,28 +379,28 @@
         }
     };
 
-    // Obsługa nawigacji
-    prevMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
-    });
+        // Obsługa nawigacji
+        prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
 
-    nextMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
-    });
+        nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
 
-    function getRepeatTypeDisplay(repeatType) {
-        const repeatTypes = {
-            'none': 'Bez powtarzania',
-            'daily': 'Codziennie',
-            'weekly': 'Co tydzień',
-            'monthly': 'Co miesiąc',
-            'custom': 'Niestandardowy'
-        };
+        function getRepeatTypeDisplay(repeatType) {
+            const repeatTypes = {
+                'none': 'Bez powtarzania',
+                'daily': 'Codziennie',
+                'weekly': 'Co tydzień',
+                'monthly': 'Co miesiąc',
+                'custom': 'Niestandardowy'
+            };
 
-        return repeatTypes[repeatType] || repeatType;
-    }
+            return repeatTypes[repeatType] || repeatType;
+        }
 
     function showScheduleDetails(scheduleId) {
             const modalBody = document.getElementById('scheduleDetailsContent');
