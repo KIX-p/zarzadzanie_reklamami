@@ -511,11 +511,8 @@
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush">
 
-                            <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#generateReportModal">
-                                <i class="fas fa-file-alt me-2 fa-fw"></i>Generuj raport materiałów
-                            </a>
-                            <a href="#" class="list-group-item list-group-item-action" id="checkStatusBtn">
-                                <i class="fas fa-sync me-2 fa-fw"></i>Sprawdź status odtwarzaczy
+                             <a href="{% url 'materials-report' %}" class="list-group-item list-group-item-action">
+                                <i class="fas fa-file-export me-2"></i>Generuj raport materiałów
                             </a>
                         </div>
                     </div>
