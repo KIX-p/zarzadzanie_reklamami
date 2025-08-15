@@ -27,6 +27,9 @@
                         {% if form.password.errors %}
                             <div class="text-danger">{{ form.password.errors }}</div>
                         {% endif %}
+                        <div class="mt-1">
+                            <a href="{% url 'password_reset' %}" class="text-decoration-none small">Zapomniałeś hasła?</a>
+                        </div>
                     </div>
                     
                     <div class="mb-3 form-check">

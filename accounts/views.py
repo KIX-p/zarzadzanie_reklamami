@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView
 from django.contrib.auth.decorators import login_required
@@ -120,3 +120,19 @@ def dashboard(request):
         
     # Fallback for users without specific role
     return render(request, 'accounts/dashboard.html', context)
+
+# Dodaj ten kod na końcu pliku views.py
+class CustomPasswordChangeView(PasswordChangeView):
+    template_name = 'accounts/change_password.html'
+    success_url = reverse_lazy('dashboard')
+    
+    def form_valid(self, form):
+        messages.success(self.request, "Hasło zostało zmienione pomyślnie.")
+        return super().form_valid(form)
+    
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['old_password'].widget.attrs.update({'class': 'form-control'})
+        form.fields['new_password1'].widget.attrs.update({'class': 'form-control'})
+        form.fields['new_password2'].widget.attrs.update({'class': 'form-control'})
+        return form

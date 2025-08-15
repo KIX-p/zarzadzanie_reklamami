@@ -27,6 +27,11 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" href="{% url 'dashboard' %}">Panel</a>
                         </li>
+                        <li>
+                            <a href="{% url 'change-password' %}" class="dropdown-item">
+                                <i class="fas fa-key me-1"></i> Zmień hasło
+                            </a>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle text-dark d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user-circle me-1"></i>{{ user.username }}
