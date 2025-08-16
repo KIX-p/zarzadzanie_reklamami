@@ -364,10 +364,6 @@
                 carouselContainer.appendChild(slide);
             });
 
-            // Start the carousel
-            isPlaying = true;
-            showSlide(0);
-
             let totalDuration = 0;
 
             materials.forEach((material) => {
@@ -383,6 +379,10 @@
                 console.log('Odświeżanie strony po pełnym cyklu materiałów...');
                 window.location.reload();
             }, totalDuration * 1000);
+
+            // Start the carousel
+            isPlaying = true;
+            showSlide(0);
         }
 
         // Show slide at specified index
@@ -519,11 +519,11 @@
         });
 
         // Load materials when the page loads
-        window.addEventListener('load', () => {
-            loadMaterials();
-            startRefreshTimer();
-            toggleDebugMode();
-        });
+        {#window.addEventListener('load', () => {#}
+        {#    loadMaterials();#}
+        {#    startRefreshTimer();#}
+        {#    toggleDebugMode();#}
+        {# });#}
 
         // Reload page every hour to refresh content and prevent memory leaks
         setTimeout(() => {
@@ -581,10 +581,11 @@
 
         // Rozpocznij raportowanie po załadowaniu materiałów
         window.addEventListener('load', () => {
-            toggleDebugMode();
             loadMaterials()
                 .then(() => {
-                    startStatusReporting(); // Rozpocznij raportowanie statusu
+                    startRefreshTimer();      // sprawdzanie nowych materiałów co 5 min
+                    startStatusReporting();   // raportowanie statusu co 60s
+                    toggleDebugMode();
                     document.getElementById('statusIndicator').style.display = 'block';
                 })
                 .catch(error => {
@@ -592,6 +593,7 @@
                     reportStatus(`Błąd ładowania materiałów: ${error.message}`);
                 });
         });
+
     </script>
 </body>
 </html>
