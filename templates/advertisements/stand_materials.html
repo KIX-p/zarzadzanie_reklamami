@@ -256,13 +256,13 @@
                         <p>Dodaj materiały, aby rozpocząć konfigurację wyświetlania reklam.</p>
                     </div>
                 {% endif %}
-                
+
                 <div class="drop-indicator">
                     <i class="fas fa-arrow-down fa-2x mb-2"></i>
                     <h5>Upuść tutaj, aby dodać do listy</h5>
                 </div>
             </div>
-            
+
             {% if materials %}
                 <div class="alert alert-info mt-3">
                     <i class="fas fa-info-circle me-2"></i>
@@ -388,21 +388,6 @@
                         </div>
                     </div>
                 </div>
-{#                <div class="card">#}
-{#                    <div class="card-header bg-light">#}
-{#                        <h5 class="mb-0">Pomoc</h5>#}
-{#                    </div>#}
-{#                    <div class="card-body">#}
-{#                        <h6>Jak uruchomić odtwarzacz?</h6>#}
-{#                        <ol class="small">#}
-{#                            <li>Kliknij "Otwórz odtwarzacz" lub zeskanuj kod QR</li>#}
-{#                            <li>W nowej karcie zaloguj się tokenem</li>#}
-{#                            <li>Włącz tryb pełnoekranowy (F11)</li>#}
-{#                        </ol>#}
-{#                        <hr>#}
-{#                        <p class="small">W przypadku problemów skontaktuj się z administratorem systemu.</p>#}
-{#                    </div>#}
-{#                </div>#}
             </div>
         </div>
     {% else %}
@@ -417,6 +402,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
 <script>
+// Funkcja do wyświetlania powiadomień
+        function showToast(message, type) {
+            // Utwórz toast
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `);
+
+            // Dodaj toast do kontenera
+            if (!$("#toast-container").length) {
+                $("body").append(`
+                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+                `);
+            }
+            $("#toast-container").append(toast);
+
+            // Pokaż toast
+            const bsToast = new bootstrap.Toast(toast[0], {
+                delay: 3000
+            });
+            bsToast.show();
+
+            // Usuń toast po ukryciu
+            toast.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
     $(function() {
         // Inicjalizacja sortable
         $("#sortable").sortable({
@@ -429,22 +447,22 @@
             stop: function(e, ui) {
                 ui.item.removeClass("ui-sortable-helper");
                 $("#sortable-container").removeClass("drop-active");
-                
+
                 // Aktualizacja numerów kolejności
                 updateOrderNumbers();
-                
+
                 // Zapisanie nowej kolejności
                 saveOrder();
             }
         });
-        
+
         // Funkcja aktualizująca numery kolejności
         function updateOrderNumbers() {
             $(".material-card .order-number").each(function(index) {
                 $(this).text(index + 1);
             });
         }
-        
+
         // Funkcja zapisująca kolejność na serwerze
         function saveOrder() {
             // Zbierz wszystkie ID w nowej kolejności
@@ -452,7 +470,7 @@
             $("#sortable .material-card").each(function() {
                 materialIds.push($(this).closest("[data-id]").data("id"));
             });
-            
+
             // Wysłanie żądania AJAX
             $.ajax({
                 url: "{% url 'update-material-order' stand_id=stand.id %}",
@@ -477,40 +495,6 @@
                     }
                     showToast(errorMessage, "danger");
                 }
-            });
-        }
-        
-        // Funkcja do wyświetlania powiadomień
-        function showToast(message, type) {
-            // Utwórz toast
-            const toast = $(`
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `);
-            
-            // Dodaj toast do kontenera
-            if (!$("#toast-container").length) {
-                $("body").append(`
-                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-                `);
-            }
-            $("#toast-container").append(toast);
-            
-            // Pokaż toast
-            const bsToast = new bootstrap.Toast(toast[0], {
-                delay: 3000
-            });
-            bsToast.show();
-            
-            // Usuń toast po ukryciu
-            toast.on('hidden.bs.toast', function() {
-                $(this).remove();
             });
         }
     });
@@ -564,7 +548,7 @@
                     success: function(data) {
                         // Aktualizuj token w polu tekstowym
                         $(".token-box").text(data.token);
-                        
+
                         // Regeneruj kod QR z nowym tokenem
                         $("#qrcode").empty();
                         const playerUrl = "{% url 'player-view' %}?token=" + data.token + "&stand={{ stand.id }}";
@@ -576,7 +560,7 @@
                             colorLight: "#ffffff",
                             correctLevel: QRCode.CorrectLevel.H
                         });
-                        
+
                         showToast("Token został zresetowany", "success");
                     },
                     error: function(xhr) {
@@ -630,13 +614,13 @@
                         $("#playerStatus").removeClass("status-online").addClass("status-offline");
                         $("#statusText").text("Offline");
                     }
-                    
+
                     // Aktualizacja dodatkowych informacji
                     if (data.last_seen) {
                         const lastSeen = new Date(data.last_seen);
                         const now = new Date();
                         const diffMinutes = Math.floor((now - lastSeen) / (1000 * 60));
-                        
+
                         if (diffMinutes < 2) {
                             $("#lastActivity").text("Teraz");
                         } else {
@@ -645,11 +629,11 @@
                     } else {
                         $("#lastActivity").text("Nigdy");
                     }
-                    
+
                     // Aktualizuj informacje o wersji i rozdzielczości
                     $("#playerVersion").text(data.version || "Nieznana");
                     $("#playerResolution").text(data.screen_resolution || "Nieznana");
-                    
+
                     showToast("Status odtwarzacza zaktualizowany", "success");
                 },
                 error: function(xhr, status, error) {
@@ -667,84 +651,54 @@
         $(function() {
             // Ładowanie statusu odtwarzacza przy załadowaniu strony
             loadPlayerStatus();
-            
+
             // Ustawienie interwału odświeżania co 30 sekund
             setInterval(loadPlayerStatus, 30000);
-            
+
             // Obsługa przycisku odświeżania
             $("#refreshStatus").click(function() {
                 loadPlayerStatus();
             });
         });
-
-        // Funkcja do wyświetlania powiadomień
-        function showToast(message, type) {
-            // Utwórz toast
-            const toast = $(`
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `);
-
-            // Dodaj toast do kontenera
-            if (!$("#toast-container").length) {
-                $("body").append(`
-                    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-                `);
-            }
-            $("#toast-container").append(toast);
-
-            // Pokaż toast
-            const bsToast = new bootstrap.Toast(toast[0], {
-                delay: 3000
-            });
-            bsToast.show();
-
-            // Usuń toast po ukryciu
-            toast.on('hidden.bs.toast', function() {
-                $(this).remove();
-            });
-        }
     });
 
     $(function () {
-        $("#openAnimationModal").click(function (e) {
+    $("#openAnimationModal").click(function (e) {
+        e.preventDefault();
+
+        const url = $(this).attr("href");
+        $("#animationModal").modal("show");
+
+        $.get(url, function (data) {
+            let formHtml = $(data).find("form");
+
+            // Usuwamy przyciski logouta (jeśli by się gdzieś pojawiły)
+            formHtml.find("a[href*='logout']").remove();
+
+            $("#animationModalBody").html(formHtml);
+
+            // Obsługa submit
+            $("#animationModalBody form").on("submit", function (e) {
                 e.preventDefault();
+                const form = $(this);
+                const actionUrl = form.attr("action") || url;
 
-                const url = $(this).attr("href");
-                $("#animationModal").modal("show");
-
-                $.get(url, function (data) {
-                    const formHtml = $(data).find("form");
-                    $("#animationModalBody").html(formHtml);
-
-                    // Ponowna inicjalizacja przycisku submit
-                    $("#animationModalBody form").on("submit", function (e) {
-                        e.preventDefault();
-                        const form = $(this);
-                        const actionUrl = form.attr("action") || url;
-
-                        $.post(actionUrl, form.serialize(), function (response) {
-                            if ($(response).find("form").length) {
-                                // Błędy walidacji — pokaż ponownie formularz
-                                const newForm = $(response).find("form");
-                                $("#animationModalBody").html(newForm);
-                            } else {
-                                // Zakładamy, że przekierowanie = sukces
-                                $("#animationModal").modal("hide");
-                                showToast("Zapisano zmianę animacji", "success");
-                                // Możesz dodać kod do odświeżenia części strony, jeśli trzeba
-                                location.reload();
-                            }
-                        });
-                    });
+                $.post(actionUrl, form.serialize(), function (response) {
+                    // Jeśli formularz zawiera błędy walidacji
+                    if ($(response).find("form").length) {
+                        let newForm = $(response).find("form");
+                        newForm.find("a[href*='logout']").remove();
+                        $("#animationModalBody").html(newForm);
+                    } else {
+                        // Sukces
+                        $("#animationModal").modal("hide");
+                        showToast("Animacja przejścia została zmieniona", "success");
+                        location.reload();
+                    }
                 });
             });
         });
+    });
+});
 </script>
 {% endblock %}
