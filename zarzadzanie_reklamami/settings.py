@@ -206,21 +206,21 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
 
-# NA PRODUKCJI USUNAC I UZYC CRON!!!!!
-try:
-    from apscheduler.schedulers.background import BackgroundScheduler
-    import subprocess
-    import sys
+# # NA PRODUKCJI USUNAC I UZYC CRON!!!!!
+# try:
+#     from apscheduler.schedulers.background import BackgroundScheduler
+#     import subprocess
+#     import sys
     
-    scheduler = BackgroundScheduler()
+#     scheduler = BackgroundScheduler()
     
-    def update_schedules_task():
-        python_executable = sys.executable
-        subprocess.call([python_executable, 'manage.py', 'update_schedules'])
+#     def update_schedules_task():
+#         python_executable = sys.executable
+#         subprocess.call([python_executable, 'manage.py', 'update_schedules'])
     
-    # Uruchamiaj co minutę
-    scheduler.add_job(update_schedules_task, 'interval', minutes=1)
-    scheduler.start()
-except ImportError:
-    # APScheduler nie jest zainstalowany, pomijamy
-    pass
+#     # Uruchamiaj co minutę
+#     scheduler.add_job(update_schedules_task, 'interval', minutes=1)
+#     scheduler.start()
+# except ImportError:
+#     # APScheduler nie jest zainstalowany, pomijamy
+#     pass
