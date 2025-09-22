@@ -88,7 +88,7 @@ class AdvertisementMaterial(models.Model):
                 # Dodatkowe transformacje dla wideo
                 {'video_codec': 'auto'},
                 {'bit_rate': '500k'},  # lub konkretna wartość np. '500k'
-                {'width': 1280},       # zmiana rozdzielczości
+                {'width': 3840, 'height': 2160, 'crop': 'limit'},       # zmiana rozdzielczości
             ],
             validators=[CloudinaryFileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm', 'mov', 'avi', 'mkv'])],
             help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm, mov, avi, mkv.",
