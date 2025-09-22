@@ -83,10 +83,15 @@ class AdvertisementMaterial(models.Model):
             resource_type='auto',
             folder='advertisements/',
             transformation=[
-                {'fetch_format': 'auto', 'quality': 'auto'}
+                # Istniejące transformacje
+                {'fetch_format': 'auto', 'quality': 'auto'},
+                # Dodatkowe transformacje dla wideo
+                {'video_codec': 'auto'},
+                {'bit_rate': 'auto'},  # lub konkretna wartość np. '500k'
+                {'width': 1280},       # zmiana rozdzielczości
             ],
-            validators=[CloudinaryFileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm'])],
-            help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm.",
+            validators=[CloudinaryFileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm', 'mov'])],
+            help_text="Wybierz plik obrazu lub wideo. Obsługiwane formaty: jpg, jpeg, png, mp4, webm, mov.",
         )
     expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Data wygaśnięcia")
     order = models.PositiveIntegerField(default=0, verbose_name="Kolejność")
