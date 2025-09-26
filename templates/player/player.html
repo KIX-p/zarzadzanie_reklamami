@@ -395,53 +395,53 @@
 
             // Remove all states
             slides.forEach((slide, i) => {
-                slide.classList.remove('active', 'previous');
                 if (i === currentIndex) slide.classList.add('previous');
+                slide.classList.remove('active');
+                
+                // Pause any videos in non-active slides
+                const videoElement = slide.querySelector('video');
+                if (videoElement) {
+                    videoElement.pause();
+                }
             });
 
             // Show current slide
-            slides[index].classList.add('active');
-
-            // If it's a video, play it and wait for it to end
-            const currentSlide = slides[index];
-            const video = currentSlide.querySelector('video');
-
-            if (video) {
-                video.currentTime = 0;
-                video.play();
-
-                // Move to next slide when video ends
-                video.onended = function() {
-                    nextSlide();
-                };
-
-                // Fallback in case video doesn't trigger onended
-                setTimeout(() => {
-                    if (!video.paused && isPlaying) {
-                        nextSlide();
-                    }
-                }, (parseInt(video.dataset.duration) || window.displayTime) * 1000);
-
+            currentIndex = index;
+            slides[currentIndex].classList.add('active');
+            
+            // Play video if the current slide contains one
+            const currentSlide = slides[currentIndex];
+            const videoElement = currentSlide.querySelector('video');
+            
+            if (videoElement) {
+                videoElement.currentTime = 0; // Reset video to beginning
+                videoElement.play()
+                    .catch(e => console.error('Error playing video:', e));
+                
+                // Get duration from video element or use default
+                const duration = parseInt(videoElement.dataset.duration) || window.displayTime;
+                console.log(`Video duration: ${duration} seconds`);
+                
+                // Move to next slide after video duration
+                setTimeout(() => nextSlide(), duration * 1000);
             } else {
-                // For images, move to next slide after the specified duration
-                const material = materials[index];
-                const duration = material.duration || window.displayTime;
-
-                setTimeout(() => {
-                    if (isPlaying) {
-                        nextSlide();
-                    }
-                }, duration * 1000);
+                // For images, use the default display time
+                setTimeout(() => nextSlide(), window.displayTime * 1000);
             }
+            
+            // Report that slide changed
+            reportStatus();
         }
 
         // Move to next slide
         function nextSlide() {
-            currentIndex++;
-            if (currentIndex >= materials.length) {
-                currentIndex = 0;
-            }
-            showSlide(currentIndex);
+            if (!isPlaying) return;
+            
+            const slides = document.querySelectorAll('.carousel-slide');
+            if (slides.length === 0) return;
+            
+            const nextIndex = (currentIndex + 1) % slides.length;
+            showSlide(nextIndex);
         }
 
         // Handle keyboard shortcuts
