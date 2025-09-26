@@ -354,8 +354,8 @@
                 } else if (material.material_type === 'video') {
                     const video = document.createElement('video');
                     video.src = material.file_url;
-                    video.autoplay = false;
-                    video.muted = false;
+                    video.autoplay = true;
+                    video.muted = true;
                     video.controls = false;
                     video.dataset.duration = material.duration || window.displayTime;
                     slide.appendChild(video);
