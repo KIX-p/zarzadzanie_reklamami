@@ -36,8 +36,13 @@
             opacity: 0;
             z-index: 0;
             pointer-events: none;
-            transition: opacity 1s ease-in-out, transform 1s ease-in-out;
+            will-change: transform, opacity;
+            transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             overflow: hidden;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+            -webkit-font-smoothing: antialiased;
         }
 
         .carousel-slide.active {
@@ -52,18 +57,18 @@
 
         /* FADE */
         .fade-transition .carousel-slide {
-            transform: none;
+            transform: translateZ(0);
         }
 
         /* SLIDE */
         .slide-transition .carousel-slide {
-            transform: translateX(100%);
+            transform: translateX(100%) translateZ(0);
         }
         .slide-transition .carousel-slide.previous {
-            transform: translateX(-100%);
+            transform: translateX(-100%) translateZ(0);
         }
         .slide-transition .carousel-slide.active {
-            transform: translateX(0);
+            transform: translateX(0) translateZ(0);
         }
 
         /* ZOOM */
@@ -341,6 +346,10 @@
         function initCarousel() {
             carouselContainer.innerHTML = '';
 
+            // Zastosuj style akceleracji sprzętowej dla kontenera
+            carouselContainer.style.transform = 'translateZ(0)';
+            carouselContainer.style.backfaceVisibility = 'hidden';
+
             // Create slides
             materials.forEach((material, index) => {
                 const slide = document.createElement('div');
@@ -354,17 +363,29 @@
                     const img = document.createElement('img');
                     img.src = material.file_url;
                     img.alt = `Material ${index + 1}`;
+                    // Dodaj loading="eager" tylko dla pierwszych dwóch obrazów
+                    if (index < 2) {
+                        img.setAttribute('loading', 'eager');
+                    } else {
+                        img.setAttribute('loading', 'lazy');
+                    }
+                    // Dodaj event listenery dla monitorowania ładowania
+                    img.onload = () => console.log(`Image ${index} loaded successfully`);
+                    img.onerror = () => console.error(`Error loading image ${index}`);
                     slide.appendChild(img);
 
                 } else if (material.material_type === 'video') {
                     const video = document.createElement('video');
-                    video.src = material.file_url;
-                    video.autoplay = true;
-                    video.muted = true;
-                    video.controls = false;
-                    video.dataset.duration = material.duration || window.displayTime;
-                    slide.appendChild(video);
-                }
+                        video.src = material.file_url;
+                        video.autoplay = index === 0; // Autoplay tylko dla pierwszego slajdu
+                        video.muted = true;
+                        video.controls = false;
+                        video.playsInline = true; // Ważne dla iOS
+                        video.dataset.duration = material.duration || window.displayTime;
+                        // Preload tylko dla pierwszych dwóch wideo
+                        video.preload = index < 2 ? 'auto' : 'metadata';
+                        slide.appendChild(video);
+                    }
 
                 carouselContainer.appendChild(slide);
             });
@@ -381,61 +402,102 @@
 
             // Odśwież stronę po przejściu wszystkich materiałów
             setTimeout(() => {
-                console.log('Odświeżanie strony po pełnym cyklu materiałów...');
-                window.location.reload();
-            }, totalDuration * 1000);
+                isPlaying = true;
+                showSlide(0);
+                // Preładuj drugi slajd
+                if (materials.length > 1) {
+                    preloadNextSlide(0);
+                }
+            }, 100);
 
             // Start the carousel
             isPlaying = true;
             showSlide(0);
         }
 
-        // Show slide at specified index
         function showSlide(index) {
             if (!isPlaying) return;
 
             const slides = document.querySelectorAll('.carousel-slide');
-
             if (slides.length === 0) return;
+            
+            requestAnimationFrame(() => {
+                // Usuń wszystkie stany ale zachowaj poprzedni slajd dla płynnego przejścia
+                slides.forEach((slide, i) => {
+                    if (i === currentIndex) slide.classList.add('previous');
+                    slide.classList.remove('active');
+                    
+                    // Zatrzymaj wideo w nieaktywnych slajdach
+                    const videoElement = slide.querySelector('video');
+                    if (videoElement) {
+                        videoElement.pause();
+                    }
+                });
 
-            // Remove all states
-            slides.forEach((slide, i) => {
-                if (i === currentIndex) slide.classList.add('previous');
-                slide.classList.remove('active');
-                
-                // Pause any videos in non-active slides
-                const videoElement = slide.querySelector('video');
-                if (videoElement) {
-                    videoElement.pause();
-                }
+                // Pokaż aktualny slajd (opóźnione wykonanie dla lepszej wydajności)
+                setTimeout(() => {
+                    currentIndex = index;
+                    slides[currentIndex].classList.add('active');
+                    
+                    // Odtwórz wideo jeśli obecny slajd zawiera wideo
+                    const currentSlide = slides[currentIndex];
+                    const videoElement = currentSlide.querySelector('video');
+                    
+                    if (videoElement) {
+                        videoElement.currentTime = 0; // Zresetuj wideo
+                        
+                        // Użyj obietnic dla lepszego zarządzania odtwarzaniem
+                        const playPromise = videoElement.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise
+                                .then(() => {
+                                    // Wideo zostało pomyślnie rozpoczęte
+                                    console.log('Video playback started successfully');
+                                    
+                                    // Przejdź do następnego slajdu po czasie trwania wideo
+                                    const duration = parseInt(videoElement.dataset.duration) || window.displayTime;
+                                    setTimeout(() => nextSlide(), duration * 1000);
+                                })
+                                .catch(error => {
+                                    console.error('Error playing video:', error);
+                                    // W przypadku błędu, przejdź do następnego slajdu po domyślnym czasie
+                                    setTimeout(() => nextSlide(), window.displayTime * 1000);
+                                });
+                        } else {
+                            // Starsza przeglądarka - użyj tradycyjnego timera
+                            setTimeout(() => nextSlide(), (parseInt(videoElement.dataset.duration) || window.displayTime) * 1000);
+                        }
+                    } else {
+                        // Dla obrazów użyj domyślnego czasu wyświetlania
+                        setTimeout(() => nextSlide(), window.displayTime * 1000);
+                    }
+                }, 50); // Krótkie opóźnienie dla lepszej wydajności renderowania
             });
+        }
 
-            // Show current slide
-            currentIndex = index;
-            slides[currentIndex].classList.add('active');
+        function preloadNextSlide(currentIndex) {
+            const slides = document.querySelectorAll('.carousel-slide');
+            if (slides.length <= 1) return;
             
-            // Play video if the current slide contains one
-            const currentSlide = slides[currentIndex];
-            const videoElement = currentSlide.querySelector('video');
+            const nextIndex = (currentIndex + 1) % slides.length;
+            const nextSlide = slides[nextIndex];
             
-            if (videoElement) {
-                videoElement.currentTime = 0; // Reset video to beginning
-                videoElement.play()
-                    .catch(e => console.error('Error playing video:', e));
-                
-                // Get duration from video element or use default
-                const duration = parseInt(videoElement.dataset.duration) || window.displayTime;
-                console.log(`Video duration: ${duration} seconds`);
-                
-                // Move to next slide after video duration
-                setTimeout(() => nextSlide(), duration * 1000);
-            } else {
-                // For images, use the default display time
-                setTimeout(() => nextSlide(), window.displayTime * 1000);
+            // Preładuj następny obraz jeśli to obraz
+            const nextImg = nextSlide.querySelector('img');
+            if (nextImg && !nextImg.complete) {
+                nextImg.setAttribute('loading', 'eager');
             }
             
-            // Report that slide changed
-            reportStatus();
+            // Preładuj następne wideo jeśli to wideo
+            const nextVideo = nextSlide.querySelector('video');
+            if (nextVideo) {
+                nextVideo.preload = 'auto';
+                // Załaduj pierwsze kilka sekund
+                if (nextVideo.readyState === 0) {
+                    nextVideo.load();
+                }
+            }
         }
 
         // Move to next slide
