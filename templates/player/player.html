@@ -402,13 +402,9 @@
 
             // Odśwież stronę po przejściu wszystkich materiałów
             setTimeout(() => {
-                isPlaying = true;
-                showSlide(0);
-                // Preładuj drugi slajd
-                if (materials.length > 1) {
-                    preloadNextSlide(0);
-                }
-            }, 100);
+                console.log('Odświeżanie strony po pełnym cyklu materiałów...');
+                window.location.reload();
+            }, totalDuration * 1000);
 
             // Start the carousel
             isPlaying = true;
@@ -474,30 +470,6 @@
                     }
                 }, 50); // Krótkie opóźnienie dla lepszej wydajności renderowania
             });
-        }
-
-        function preloadNextSlide(currentIndex) {
-            const slides = document.querySelectorAll('.carousel-slide');
-            if (slides.length <= 1) return;
-            
-            const nextIndex = (currentIndex + 1) % slides.length;
-            const nextSlide = slides[nextIndex];
-            
-            // Preładuj następny obraz jeśli to obraz
-            const nextImg = nextSlide.querySelector('img');
-            if (nextImg && !nextImg.complete) {
-                nextImg.setAttribute('loading', 'eager');
-            }
-            
-            // Preładuj następne wideo jeśli to wideo
-            const nextVideo = nextSlide.querySelector('video');
-            if (nextVideo) {
-                nextVideo.preload = 'auto';
-                // Załaduj pierwsze kilka sekund
-                if (nextVideo.readyState === 0) {
-                    nextVideo.load();
-                }
-            }
         }
 
         // Move to next slide
