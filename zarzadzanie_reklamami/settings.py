@@ -173,8 +173,8 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# File upload size limit (10MB)
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+# File upload size limit (100MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 
 # Login and logout URLs
 LOGIN_URL = 'login'
