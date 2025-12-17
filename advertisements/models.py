@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import FileExtensionValidator
 from cloudinary.models import CloudinaryField
+from cloudinary.utils import cloudinary_url
 from .validators import CloudinaryFileExtensionValidator
 import cloudinary
 from django.db.models.signals import post_delete
@@ -87,7 +88,6 @@ class AdvertisementMaterial(models.Model):
                 {'fetch_format': 'auto', 'quality': 'auto'},
                 # Dodatkowe transformacje dla wideo
                 {'video_codec': 'auto'},
-                {'bit_rate': '500k'},  # lub konkretna wartość np. '500k'
                 {'width': 3840, 'height': 2160, 'crop': 'limit'},       # zmiana rozdzielczości
             ],
             validators=[CloudinaryFileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'mp4', 'webm', 'mov', 'avi', 'mkv'])],
@@ -104,7 +104,34 @@ class AdvertisementMaterial(models.Model):
         verbose_name = "Materiał reklamowy"
         verbose_name_plural = "Materiały reklamowe"
         ordering = ['order']
-
+        
+    @property
+    def file_url(self):
+        """Poprawny URL do pliku (video -> mp4, image -> auto)."""
+        try:
+            if not self.file or not getattr(self.file, 'public_id', None):
+                return ''
+            public_id = self.file.public_id  # np. advertisements/abc123
+            if self.material_type == 'video':
+                url, _ = cloudinary_url(
+                    public_id,
+                    resource_type='video',
+                    format='mp4',          # zapewnia kompatybilność
+                    secure=True,
+                )
+                return url
+            else:
+                url, _ = cloudinary_url(
+                    public_id,
+                    resource_type='image',
+                    secure=True,
+                    transformation=[{'fetch_format': 'auto', 'quality': 'auto'}]
+                )
+                return url
+        except Exception as e:
+            logger.error(f'Błąd generowania URL: {e}')
+            return ''
+        
     @property
     def is_expired(self):
         """Sprawdza czy materiał wygasł i ustawia status na nieaktywny"""

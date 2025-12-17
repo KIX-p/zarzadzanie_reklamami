@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from cloudinary.utils import cloudinary_url
 from .models import Store, Department, Stand, AdvertisementMaterial
 
 class StoreSerializer(serializers.ModelSerializer):
@@ -21,13 +22,25 @@ class AdvertisementMaterialSerializer(serializers.ModelSerializer):
         fields = ['id', 'material_type', 'file_url', 'order', 'duration']
     
     def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and hasattr(obj.file, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.file.url)
+        # Używaj zawsze właściwego resource_type; wideo dostarczaj jako mp4
+        if not obj.file:
+            return None
+        if obj.material_type == 'video' and getattr(obj.file, 'public_id', None):
+            url, _ = cloudinary_url(
+                obj.file.public_id,
+                resource_type='video',
+                format='mp4',
+                secure=True
+            )
+            return url
+        # obrazy: zostaw standardowy URL z Cloudinary
+        if hasattr(obj.file, 'url') and obj.file.url:
             return obj.file.url
-        return None
-
+        if getattr(obj.file, 'public_id', None):
+            url, _ = cloudinary_url(obj.file.public_id, resource_type='image', secure=True)
+            return url
+        return obj.file_url or None
+    
 class StandSerializer(serializers.ModelSerializer):
     department = DepartmentSerializer(read_only=True)
     materials = serializers.SerializerMethodField()

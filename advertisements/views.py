@@ -19,6 +19,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from django.http import FileResponse, HttpResponse
 import csv
 import xlsxwriter
+import cloudinary
+import cloudinary.uploader
 
 from .models import Store, Department, Stand, AdvertisementMaterial, EmissionSchedule
 from accounts.permissions import SuperadminRequiredMixin, StoreAdminRequiredMixin, EditorRequiredMixin, StoreAccessMixin
@@ -89,11 +91,28 @@ class MaterialCreateView(EditorRequiredMixin, StoreAccessMixin, CreateView):
         return initial
 
     def form_valid(self, form):
-        form.instance.order = AdvertisementMaterial.objects.filter(stand=form.instance.stand).count()
-        response = super().form_valid(form)
-        messages.success(self.request, "Materiał został dodany pomyślnie.")
-        return response
+        self.object = form.save(commit=False)
+        file_obj = form.cleaned_data.get('file')
 
+        if file_obj and getattr(file_obj, 'size', 0) > 20 * 1024 * 1024:
+            # Duże pliki -> upload_large (chunked)
+            result = cloudinary.uploader.upload_large(
+                file_obj,
+                resource_type='auto',
+                folder='advertisements/',
+                chunk_size=6 * 1024 * 1024,  # 6MB chunki
+                use_filename=True,
+                unique_filename=True
+            )
+            # Zapisz referencję do Cloudinary
+            self.object.file = result.get('public_id')
+        else:
+            # Standardowy zapis przez CloudinaryField
+            pass
+        self.object.save()
+        messages.success(self.request, "Materiał dodany.")
+        return redirect(self.get_success_url())
+    
     def get_success_url(self):
         return reverse('stand-materials', kwargs={'pk': self.object.stand.pk})
 
